@@ -2,7 +2,9 @@ package com.ravingarinc.actor.command;
 
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.command.subcommand.NPCOption;
+import com.ravingarinc.actor.command.subcommand.SkinOption;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.npc.SkinClient;
 
 public class ParentCommand extends BaseCommand {
 
@@ -18,5 +20,7 @@ public class ParentCommand extends BaseCommand {
         });
 
         addOption("npc", new NPCOption(this, plugin.getModule(ActorManager.class)));
+
+        addOption("skin", new SkinOption(this, plugin.getModule(SkinClient.class)));
     }
 }

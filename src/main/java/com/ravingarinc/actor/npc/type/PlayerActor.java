@@ -29,6 +29,7 @@ import java.util.logging.Level;
 public class PlayerActor extends Actor<LivingEntity> {
 
     private final PlayerProfile profile;
+    private final WrappedGameProfile gameProfile;
     private String name;
     private String url = null;
     private PlayerInfoData data = null;
@@ -37,6 +38,7 @@ public class PlayerActor extends Actor<LivingEntity> {
         super(profile.getUniqueId(), entity, spawnLocation, manager);
         this.name = profile.getName();
         this.profile = profile;
+        this.gameProfile = new WrappedGameProfile(uuid, "");
     }
 
     /**
@@ -81,16 +83,15 @@ public class PlayerActor extends Actor<LivingEntity> {
         properties.get("textures").add(new WrappedSignedProperty("textures", encoded, null));
     }
 
+    public WrappedGameProfile getGameProfile() {
+        return gameProfile;
+    }
+
     @Override
     public void updateName(final String displayName) {
         this.name = displayName;
         this.data = null;
         getPlayerInfoData();
-        if (this.url != null) {
-            // if url is not null, then a skin has been applied. Therefore since we recalculated player info data, we
-            // must reapply the skin
-            updateSkin(url);
-        }
     }
 
     @Override
@@ -120,7 +121,7 @@ public class PlayerActor extends Actor<LivingEntity> {
     private PlayerInfoData getPlayerInfoData() {
         if (data == null) {
             data = new PlayerInfoData(
-                    new WrappedGameProfile(uuid, name),
+                    gameProfile,
                     100,
                     EnumWrappers.NativeGameMode.SURVIVAL,
                     WrappedChatComponent.fromText(name));

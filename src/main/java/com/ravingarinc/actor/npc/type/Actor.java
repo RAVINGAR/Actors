@@ -73,4 +73,21 @@ public abstract class Actor<T extends Entity> {
         container.getIntLists().write(0, list);
         return container;
     }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final Actor<?> actor = (Actor<?>) o;
+        return uuid.equals(actor.uuid);
+    }
+
+    @Override
+    public int hashCode() {
+        return uuid.hashCode();
+    }
 }
