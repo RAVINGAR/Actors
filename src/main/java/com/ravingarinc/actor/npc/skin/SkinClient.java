@@ -1,16 +1,22 @@
-package com.ravingarinc.actor.npc;
+package com.ravingarinc.actor.npc.skin;
 
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.file.ConfigManager;
+import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.Nullable;
 import org.mineskin.MineskinClient;
+import org.mineskin.SkinOptions;
+import org.mineskin.Variant;
+import org.mineskin.Visibility;
 import org.mineskin.data.Skin;
 
 import java.io.File;
@@ -43,9 +49,11 @@ public class SkinClient extends Module {
 
     private SkinRunner runner = null;
 
+    private ActorManager actorManager;
+
 
     public SkinClient(final RavinPlugin plugin) {
-        super(SkinClient.class, plugin, ConfigManager.class);
+        super(SkinClient.class, plugin, ConfigManager.class, ActorManager.class);
         this.skinClient = new MineskinClient("Actors", "d643ce8090a196feb834e39b410ae17b87ac7a2c514bd328e0f90fce61aa3461");
         this.skinFolder = new File(plugin.getDataFolder() + "/skins");
         this.cachedSkins = new ConcurrentHashMap<>();
@@ -90,9 +98,12 @@ public class SkinClient extends Module {
 
     @Override
     protected void load() throws ModuleLoadException {
+        this.actorManager = plugin.getModule(ActorManager.class);
+
         if (!skinFolder.exists()) {
             skinFolder.mkdir();
         }
+        getValidFileNames();
         final SkinRunner lastRunner = runner;
         runner = new SkinRunner();
         if (lastRunner != null) {
@@ -105,8 +116,17 @@ public class SkinClient extends Module {
         return cachedSkins.get(name);
     }
 
+    /**
+     * Iterate all skins and unlink the actor from them if it is linked.
+     *
+     * @param actor The actor
+     */
+    public void unlinkActorAll(final PlayerActor actor) {
+        cachedSkins.values().forEach(skin -> skin.unlinkActor(actor));
+    }
+
     public void uploadSkin(final CommandSender sender, final File file, final String name) throws FileNotFoundException {
-        final CompletableFuture<Skin> skinFuture = skinClient.generateUpload(file);
+        final CompletableFuture<Skin> skinFuture = skinClient.generateUpload(file, SkinOptions.create(name, Variant.AUTO, Visibility.PUBLIC));
         final ActorSkin skin = new ActorSkin(name);
         cachedSkins.put(name, skin);
         runner.queue(skin, skinFuture, sender);
@@ -161,26 +181,26 @@ public class SkinClient extends Module {
             this.sender = sender;
         }
 
+
+        @Async.Execute
         @Blocking
         public void waitForResult() {
             try {
-                actorSkin.loadSkinValues(future.get(30, TimeUnit.SECONDS));
+                actorSkin.setValues(future.get(30, TimeUnit.SECONDS));
+                actorSkin.apply(actorManager);
+                return;
             } catch (final InterruptedException e) {
-                I.logIfDebug(() -> "SkinUploadRequest with CompletableFuture was interrupted!", e);
-                actorSkin.discard();
+                I.log(Level.SEVERE, "SkinUploadRequest with CompletableFuture was interrupted!", e);
             } catch (final ExecutionException e) {
                 I.log(Level.SEVERE, "SkinUploadRequest encountered exception while waiting for CompletableFuture!", e);
-                actorSkin.discard();
             } catch (final TimeoutException e) {
-                I.logIfDebug(() -> "SkinUploadRequest with CompletableFuture has timed out!", e);
-                actorSkin.discard();
+                I.log(Level.WARNING, "SkinUploadRequest with CompletableFuture has timed out!", e);
                 if (sender != null) {
                     plugin.getServer().getScheduler().runTask(plugin,
                             () -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + actorSkin.getName() + "' as the request timed out! Try again later!"));
                 }
-
             }
-
+            actorSkin.discard(actorManager);
         }
     }
 }

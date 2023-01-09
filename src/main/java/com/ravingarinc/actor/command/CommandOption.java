@@ -10,16 +10,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 public class CommandOption {
-    private final BiFunction<CommandSender, String[], Boolean> function;
     private final Map<String, CommandOption> options;
-
     private final int requiredArgs;
     private final CommandOption parent;
-
     private final Map<String, Argument> argumentTypes;
-
+    private BiFunction<CommandSender, String[], Boolean> function;
     private BiFunction<CommandSender, String[], List<String>> tabCompletions;
 
     public CommandOption(final CommandOption parent, final int requiredArgs, final BiFunction<CommandSender, String[], Boolean> function) {
@@ -29,6 +27,10 @@ public class CommandOption {
         this.tabCompletions = null;
         this.requiredArgs = requiredArgs;
         this.argumentTypes = new LinkedHashMap<>();
+    }
+
+    public void setFunction(final BiFunction<CommandSender, String[], Boolean> function) {
+        this.function = function;
     }
 
     public Map<String, Argument> getArgumentTypes() {
@@ -132,7 +134,11 @@ public class CommandOption {
         return arguments.toArray(new Argument[0]);
     }
 
+    protected void registerArgument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiConsumer<Object, String[]> consumer) {
+        argumentTypes.put(prefix, new Argument(prefix, minArgs, tabCompletions, consumer, null));
+    }
+
     protected void registerArgument(final String prefix, final int minArgs, final BiConsumer<Object, String[]> consumer) {
-        argumentTypes.put(prefix, new Argument(prefix, minArgs, consumer, null));
+        this.registerArgument(prefix, minArgs, null, consumer);
     }
 }

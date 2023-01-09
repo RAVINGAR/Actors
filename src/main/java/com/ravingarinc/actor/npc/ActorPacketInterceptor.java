@@ -15,6 +15,7 @@ import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ActorPacketInterceptor extends Module {
@@ -46,7 +47,23 @@ public class ActorPacketInterceptor extends Module {
                 }
                 event.setCancelled(true);
                 final StructureModifier<Double> doubles = container.getDoubles();
-                actorManager.showActor(actor, event.getPlayer(), new Vector3(doubles.read(0), doubles.read(1), doubles.read(2)));
+                actorManager.processActorSpawn(actor, event.getPlayer(), new Vector3(doubles.read(0), doubles.read(1), doubles.read(2)));
+            }
+        });
+
+        protocolManager.addPacketListener(new PacketAdapter(plugin, ListenerPriority.MONITOR, PacketType.Play.Server.ENTITY_DESTROY) {
+            @Override
+            public void onPacketSending(final PacketEvent event) {
+                if (!event.isCancelled()) {
+                    final PacketContainer packet = event.getPacket();
+                    final List<Integer> list = packet.getIntLists().readSafely(0);
+                    if (list == null) {
+                        return;
+                    }
+                    actorManager.processOnActorDestroy(event.getPlayer(), list);
+                    // Todo when we have events for MANUALLY showing and hiding an actor, this must be different to listening for
+                    //   these events.
+                }
             }
         });
     }

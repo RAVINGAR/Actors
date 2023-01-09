@@ -54,26 +54,16 @@ public abstract class RavinPlugin extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        logger = this.getLogger();
+        this.logger = this.getLogger();
+        this.modules = new LinkedHashMap<>();
         I.load(this);
     }
 
     @Override
     public void onEnable() {
         AsyncHandler.load(this);
-        //load modules and listeners
-        {
-            this.modules = new LinkedHashMap<>();
-            loadModules();
-            modules.values().forEach(manager -> {
-                try {
-                    manager.initialise();
-                } catch (final ModuleLoadException e) {
-                    I.log(Level.SEVERE, e.getMessage());
-                }
-            });
-            validateLoad();
-        }
+        loadModules();
+        load();
         loadCommands();
     }
 
@@ -81,34 +71,52 @@ public abstract class RavinPlugin extends JavaPlugin {
 
     public abstract void loadCommands();
 
-    protected void validateLoad() {
+    public void load() {
+        modules.values().forEach(manager -> {
+            try {
+                manager.initialise();
+            } catch (final ModuleLoadException e) {
+                I.log(Level.SEVERE, e.getMessage());
+            }
+        });
+
         int loaded = 0;
         for (final Module module : modules.values()) {
             if (module.isLoaded()) {
                 loaded++;
             }
         }
-        if (loaded == modules.size()) {
-            I.log(Level.INFO, "%s has been enabled successfully!", getName());
+        if (loaded > 1) {
+            if (loaded == modules.size()) {
+                I.log(Level.INFO, "%s has been enabled successfully!", getName());
+            } else {
+                I.log(Level.INFO, "%s has been partially enabled successfully!", getName());
+                I.log(Level.WARNING, "%s module/s have failed to load!", (modules.size() - loaded));
+            }
         } else {
-            I.log(Level.WARNING, "%s module/s have failed to load! Please check your logs!", (modules.size() - loaded));
+            I.log(Level.INFO, "No modules could be loaded! %s will now shutdown...", getName());
+            this.onDisable();
         }
+
     }
 
     public void reload() {
+        cancel();
+        load();
+    }
+
+    public void cancel() {
         final List<Module> reverseOrder = new ArrayList<>(modules.values());
         Collections.reverse(reverseOrder);
-        reverseOrder.forEach(Module::cancel);
-
-        modules.values().forEach(module -> {
-            module.setLoaded(false);
-            try {
-                module.initialise();
-            } catch (final ModuleLoadException e) {
-                I.log(Level.SEVERE, e.getMessage());
+        reverseOrder.forEach(module -> {
+            if (module.isLoaded()) {
+                try {
+                    module.cancel();
+                } catch (final Exception e) {
+                    log(Level.SEVERE, "Encountered issue shutting down module '%s'!", e, module.getName());
+                }
             }
         });
-        validateLoad();
     }
 
     protected <T extends Module> void addModule(final Class<T> module) {
@@ -135,17 +143,7 @@ public abstract class RavinPlugin extends JavaPlugin {
     @Override
     @SuppressWarnings("PMD.AvoidCatchingGenericException")
     public void onDisable() {
-        final List<Module> reverseOrder = new ArrayList<>(modules.values());
-        Collections.reverse(reverseOrder);
-        reverseOrder.forEach(module -> {
-            if (module.isLoaded()) {
-                try {
-                    module.cancel();
-                } catch (final Exception e) {
-                    log(Level.SEVERE, "Encountered issue shutting down module '%s'!", e, module.getName());
-                }
-            }
-        });
+        cancel();
         this.getServer().getScheduler().cancelTasks(this);
 
         I.log(Level.INFO, getName() + " is disabled.");

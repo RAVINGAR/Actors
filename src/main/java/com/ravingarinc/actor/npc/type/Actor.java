@@ -9,8 +9,12 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Actor<T extends Entity> {
 
@@ -19,10 +23,9 @@ public abstract class Actor<T extends Entity> {
     protected final int id;
 
     protected final ProtocolManager manager;
-
+    protected final Map<UUID, Player> viewers;
     protected Vector3 spawnLocation;
     protected Location bukkitLocation;
-
 
     public Actor(final UUID uuid, final T entity, final Location spawnLocation, final ProtocolManager manager) {
         this.uuid = uuid;
@@ -31,6 +34,7 @@ public abstract class Actor<T extends Entity> {
         this.manager = manager;
         this.spawnLocation = new Vector3(spawnLocation);
         this.bukkitLocation = spawnLocation;
+        this.viewers = new ConcurrentHashMap<>();
     }
 
     public Location getBukkitLocation() {
@@ -53,13 +57,33 @@ public abstract class Actor<T extends Entity> {
         return entity;
     }
 
+    public void addViewer(final Player player) {
+        this.viewers.put(player.getUniqueId(), player);
+    }
+
+    public void removeViewer(final Player player) {
+        this.viewers.remove(player.getUniqueId());
+    }
+
+    /**
+     * Get a copy of all current viewers.
+     *
+     * @return Collection of viewers
+     */
+    public Collection<Player> getViewers() {
+        return new HashSet<>(viewers.values());
+    }
+
     /**
      * Creates a list of packets required to show an actor to a player. This differs based on the entity hence
      * why there may be different packets
      */
     public abstract List<PacketContainer> getShowPackets(Vector3 location);
 
-    public abstract void update(Player player);
+    /**
+     * Creates a list containing the necessary packets to refresh/update an entity.
+     */
+    public abstract List<PacketContainer> getUpdatePackets();
 
     public void updateName(final String displayName) {
         this.entity.setCustomName(displayName);

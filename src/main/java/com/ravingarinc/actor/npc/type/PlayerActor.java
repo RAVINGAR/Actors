@@ -14,7 +14,6 @@ import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
 import org.bukkit.profile.PlayerProfile;
 import org.bukkit.profile.PlayerTextures;
 
@@ -31,8 +30,8 @@ public class PlayerActor extends Actor<LivingEntity> {
     private final PlayerProfile profile;
     private final WrappedGameProfile gameProfile;
     private String name;
-    private String url = null;
     private PlayerInfoData data = null;
+
 
     public PlayerActor(final PlayerProfile profile, final LivingEntity entity, final Location spawnLocation, final ProtocolManager manager) {
         super(profile.getUniqueId(), entity, spawnLocation, manager);
@@ -47,7 +46,7 @@ public class PlayerActor extends Actor<LivingEntity> {
      * @param url The url of the skin
      */
     public void updateSkin(final String url) {
-        this.url = url;
+
         final PlayerTextures playerTextures = profile.getTextures();
         try {
             playerTextures.setSkin(new URL(url));
@@ -94,6 +93,7 @@ public class PlayerActor extends Actor<LivingEntity> {
         getPlayerInfoData();
     }
 
+
     @Override
     public List<PacketContainer> getShowPackets(final Vector3 location) {
         final List<PacketContainer> packets = new ArrayList<>();
@@ -118,7 +118,7 @@ public class PlayerActor extends Actor<LivingEntity> {
         return infoPacket;
     }
 
-    private PlayerInfoData getPlayerInfoData() {
+    public PlayerInfoData getPlayerInfoData() {
         if (data == null) {
             data = new PlayerInfoData(
                     gameProfile,
@@ -145,6 +145,10 @@ public class PlayerActor extends Actor<LivingEntity> {
     }
 
     @Override
-    public void update(final Player player) {
+    public List<PacketContainer> getUpdatePackets() {
+        final List<PacketContainer> packets = new ArrayList<>();
+        packets.add(getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER));
+        packets.add(getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER));
+        return packets;
     }
 }

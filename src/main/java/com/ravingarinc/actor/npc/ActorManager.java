@@ -10,7 +10,10 @@ import com.ravingarinc.actor.api.async.AsyncHandler;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
+import com.ravingarinc.actor.npc.skin.ActorSkin;
+import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -18,20 +21,31 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.Async;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 
+/**
+ * Manages all currently loaded actors and is responsible for creating new ones. Any tasks, especially packet sending
+ * should be done through this manager through the method {@link #queueAsync(Runnable)} as to prevent synchronisation issues
+ */
 public class ActorManager extends Module {
     private final static String ACTOR_META = "actor-meta";
 
     private final Map<Integer, Actor<?>> cachedActors;
     private ActorFactory factory;
     private ActorTaskRunner runner;
+
+    private SkinClient client;
     private ProtocolManager manager;
 
     /**
@@ -50,6 +64,7 @@ public class ActorManager extends Module {
     @Override
     protected void load() throws ModuleLoadException {
         manager = ProtocolLibrary.getProtocolManager();
+        client = new SkinClient(plugin);
         factory = new ActorFactory(plugin, manager);
         runner = new ActorTaskRunner();
         runner.runTaskTimerAsynchronously(plugin, 0, 1);
@@ -78,7 +93,7 @@ public class ActorManager extends Module {
     @Async.Schedule
     public void spawnActor(final Actor<?> actor) {
         final List<Player> players = actor.getBukkitLocation().getWorld().getPlayers();
-        queueTask(() -> {
+        queueAsync(() -> {
             // It is fine to hide from all players initially since this is only done when spawning for the first time.
             final List<PacketContainer> packets = actor.getShowPackets(actor.getSpawnLocation());
             packets.add(0, actor.getHidePacket()); // Insert first so it gets sent first
@@ -105,14 +120,65 @@ public class ActorManager extends Module {
      * @param location The location
      */
     @Async.Schedule
-    public void showActor(final Actor<?> actor, final Player player, final Vector3 location) {
-        queueTask(() -> actor.getShowPackets(location).forEach(packet -> {
+    public void processActorSpawn(final Actor<?> actor, final Player player, final Vector3 location) {
+        queueAsync(() -> {
+            actor.addViewer(player);
+            actor.getShowPackets(location).forEach(packet -> {
+                try {
+                    manager.sendServerPacket(player, packet);
+                } catch (final InvocationTargetException e) {
+                    I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
+                    actor.removeViewer(player);
+                }
+            });
+        });
+    }
+
+    @Async.Schedule
+    public void processOnActorDestroy(final Player player, final List<Integer> ids) {
+        queueAsync(() -> ids.stream().map(cachedActors::get).findFirst().ifPresent(actor -> actor.removeViewer(player)));
+    }
+
+    /**
+     * Called from an asynchronous context
+     *
+     * @param actor
+     */
+    @Async.Execute
+    public void processActorUpdate(final Actor<?> actor) {
+        queue(() -> {
+            final List<PacketContainer> packets = actor.getUpdatePackets();
+            final Collection<Player> viewers = actor.getViewers();
+            packets.forEach(packet -> viewers.forEach(player -> {
+                try {
+                    manager.sendServerPacket(player, packet);
+                } catch (final InvocationTargetException exception) {
+                    I.log(Level.SEVERE, "Encountered issue sending server packet to player!", exception);
+                }
+            }));
+        });
+    }
+
+    /**
+     * Process a request to change an actor's skin. The actor must be a player
+     *
+     * @param actor
+     */
+    @Async.Execute
+    public void processActorSkinChange(final PlayerActor actor, final ActorSkin skin) {
+        final FutureTask<?> future = queue(() -> client.unlinkActorAll(actor));
+
+        AsyncHandler.runAsynchronously(() -> {
+            skin.linkActor(actor);
             try {
-                manager.sendServerPacket(player, packet);
-            } catch (final InvocationTargetException e) {
-                I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
+                future.get(1000, TimeUnit.MILLISECONDS);
+                processActorUpdate(actor);
+            } catch (ExecutionException | InterruptedException e) {
+                I.log(Level.WARNING, "Encountered exception on ActorSkinChange request!", e);
+            } catch (final TimeoutException e) {
+                I.log(Level.WARNING, "ActorSkinChange request timed out!", e);
             }
-        }));
+        });
     }
 
     /**
@@ -122,7 +188,7 @@ public class ActorManager extends Module {
      * @param player The player
      */
     public void hideActor(final Actor<?> actor, final Player player) {
-        queueTask(() -> {
+        queueAsync(() -> {
             try {
                 manager.sendServerPacket(player, actor.getHidePacket());
             } catch (final InvocationTargetException e) {
@@ -147,8 +213,32 @@ public class ActorManager extends Module {
      * @param runnable The runnable
      */
     @Async.Schedule
-    private void queueTask(final Runnable runnable) {
-        AsyncHandler.runAsynchronously(() -> this.runner.tasks.add(runnable));
+    private void queueAsync(final Runnable runnable) {
+        AsyncHandler.runAsynchronously(() -> queue(runnable));
+    }
+
+    /**
+     * Queue an actor related task on an asynchronous runnable. This is run on the same thread that called it.
+     *
+     * @param runnable The runnable
+     */
+    @Async.Execute
+    private <T> FutureTask<T> queue(final T result, final Runnable runnable) {
+        final FutureTask<T> future = new FutureTask<>(runnable, result);
+        this.runner.tasks.add(future);
+        return future;
+    }
+
+    /**
+     * Queues a runnable on an asynchronous runner and returns a future representing the completion state of the
+     * runnable
+     *
+     * @param runnable The runnable
+     * @return The future
+     */
+    @Async.Execute
+    private FutureTask<?> queue(final Runnable runnable) {
+        return queue(true, runnable);
     }
 
     @Override
@@ -160,7 +250,7 @@ public class ActorManager extends Module {
     }
 
     private static class ActorTaskRunner extends BukkitRunnable {
-        private final Queue<Runnable> tasks;
+        private final Queue<FutureTask<?>> tasks;
 
         public ActorTaskRunner() {
             tasks = new ConcurrentLinkedQueue<>();

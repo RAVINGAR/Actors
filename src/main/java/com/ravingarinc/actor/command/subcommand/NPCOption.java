@@ -1,8 +1,11 @@
 package com.ravingarinc.actor.command.subcommand;
 
+import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.npc.skin.ActorSkin;
+import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.ChatColor;
@@ -15,11 +18,14 @@ import java.util.List;
 public class NPCOption extends CommandOption {
     private final ActorManager manager;
 
+    private final SkinClient client;
+
     private final List<String> entityTypes;
 
-    public NPCOption(final CommandOption parent, final ActorManager manager) {
+    public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
         super(parent, 2, (sender, args) -> false);
-        this.manager = manager;
+        this.manager = plugin.getModule(ActorManager.class);
+        this.client = plugin.getModule(SkinClient.class);
         this.entityTypes = new ArrayList<>();
         for (final EntityType t : EntityType.values()) {
             entityTypes.add(t.name().toLowerCase());
@@ -34,12 +40,14 @@ public class NPCOption extends CommandOption {
                 actor.updateName(args[0]);
             }
         });
-        registerArgument("--skin", 1, (object, args) -> {
+        registerArgument("--skin", 1, () -> client.getSkins().stream().toList(), (object, args) -> {
             if (object instanceof PlayerActor playerActor) {
-                playerActor.updateSkin(args[0]);
+                final ActorSkin skin = client.getSkin(args[0].toLowerCase());
+                if (skin != null) {
+                    skin.linkActor(playerActor);
+                }
             }
         });
-        //todo more arguments
     }
 
     private void registerOptions() {
@@ -65,14 +73,26 @@ public class NPCOption extends CommandOption {
             if (args.length == 3) {
                 return entityTypes;
             } else if (args[args.length - 2].startsWith("--")) {
-                final List<String> list = new ArrayList<>();
-                list.add("<" + args[args.length - 2].substring(2) + ">");
+                final Argument argument = getArgumentTypes().get(args[args.length - 2]);
+                if (argument == null) {
+                    return null;
+                }
+                List<String> list = argument.getTabCompletions();
+                if (list == null) {
+                    list = new ArrayList<>();
+                    list.add("<" + args[args.length - 2].substring(2) + ">");
+                }
                 return list;
             } else {
                 return getArgumentTypes().keySet().stream().toList();
             }
         });
+
+        addOption("update", 3, (sender, args) -> {
+            // todo handle things then the last thing you do is call
+
+            //manager.processActorUpdate(actor);
+            return true;
+        });
     }
-
-
 }

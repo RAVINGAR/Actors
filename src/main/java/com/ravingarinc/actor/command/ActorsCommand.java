@@ -3,12 +3,11 @@ package com.ravingarinc.actor.command;
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.command.subcommand.NPCOption;
 import com.ravingarinc.actor.command.subcommand.SkinOption;
-import com.ravingarinc.actor.npc.ActorManager;
-import com.ravingarinc.actor.npc.SkinClient;
+import com.ravingarinc.actor.npc.skin.SkinClient;
 
-public class ParentCommand extends BaseCommand {
+public class ActorsCommand extends BaseCommand {
 
-    public ParentCommand(final RavinPlugin plugin) {
+    public ActorsCommand(final RavinPlugin plugin) {
         super("actors");
 
         // The arguments count basically after the initial identifier
@@ -19,7 +18,7 @@ public class ParentCommand extends BaseCommand {
             return true;
         });
 
-        addOption("npc", new NPCOption(this, plugin.getModule(ActorManager.class)));
+        addOption("npc", new NPCOption(this, plugin));
 
         addOption("skin", new SkinOption(this, plugin.getModule(SkinClient.class)));
     }

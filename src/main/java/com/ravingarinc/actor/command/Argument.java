@@ -1,11 +1,17 @@
 package com.ravingarinc.actor.command;
 
+import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 public class Argument {
     private final String prefix;
     private final int minArgs;
     private final String[] args;
+
+    private final Supplier<List<String>> tabCompletions;
     private final BiConsumer<Object, String[]> consumer;
 
     /**
@@ -17,11 +23,12 @@ public class Argument {
      * @param args     Can be null, however if not null it is expected this contains all arguments after the preceding
      *                 --arg (as specified by prefix) but up to the next --arg
      */
-    public Argument(final String prefix, final int minArgs, final BiConsumer<Object, String[]> consumer, final String[] args) {
+    public Argument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiConsumer<Object, String[]> consumer, final String[] args) {
         this.prefix = prefix;
         this.minArgs = minArgs;
         this.consumer = consumer;
         this.args = args;
+        this.tabCompletions = tabCompletions;
     }
 
     /**
@@ -36,6 +43,14 @@ public class Argument {
         consumer.accept(value, args);
     }
 
+    @Nullable
+    public List<String> getTabCompletions() {
+        if (tabCompletions == null) {
+            return null;
+        }
+        return tabCompletions.get();
+    }
+
     /**
      * Creates a filled argument.
      *
@@ -47,7 +62,7 @@ public class Argument {
         if (args.length < minArgs) {
             throw new InvalidArgumentException();
         }
-        return new Argument(prefix, minArgs, consumer, args);
+        return new Argument(prefix, minArgs, tabCompletions, consumer, args);
     }
 
     public static class InvalidArgumentException extends Exception {

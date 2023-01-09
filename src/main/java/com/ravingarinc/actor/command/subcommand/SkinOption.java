@@ -1,7 +1,7 @@
 package com.ravingarinc.actor.command.subcommand;
 
 import com.ravingarinc.actor.command.CommandOption;
-import com.ravingarinc.actor.npc.SkinClient;
+import com.ravingarinc.actor.npc.skin.SkinClient;
 import org.bukkit.ChatColor;
 
 import java.io.File;
