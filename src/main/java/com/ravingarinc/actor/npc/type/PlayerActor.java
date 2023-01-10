@@ -8,20 +8,15 @@ import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import com.google.common.collect.Multimap;
-import com.google.gson.JsonObject;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.profile.PlayerTextures;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -31,57 +26,28 @@ public class PlayerActor extends Actor<LivingEntity> {
     private final PlayerProfile profile;
     private final WrappedGameProfile gameProfile;
     private String name;
+
     private PlayerInfoData data = null;
 
 
     public PlayerActor(final UUID uuid, final PlayerProfile profile, final LivingEntity entity, final Location spawnLocation, final ProtocolManager manager) {
         super(uuid, entity, spawnLocation, manager);
-        this.name = "";
+        this.name = "Actor";
         this.profile = profile;
-        this.gameProfile = new WrappedGameProfile(uuid, null);
+        this.gameProfile = new WrappedGameProfile(uuid, name);
     }
 
-    /**
-     * Updates the skin for this player. The updated player profile is not sent to the client from this method
-     *
-     * @param url The url of the skin
-     */
-    public void updateSkin(final String url) {
+    public void updateProfile(final String value, final String signature) {
+        I.log(Level.WARNING, "Updating profile!");
 
-        final PlayerTextures playerTextures = profile.getTextures();
-        try {
-            playerTextures.setSkin(new URL(url));
-        } catch (final MalformedURLException exception) {
-            I.log(Level.WARNING, "Could not update skin due to invalid URL!");
-            return;
-        }
-        profile.setTextures(playerTextures);
-
-
-        final PlayerInfoData data = getPlayerInfoData();
-        final WrappedGameProfile gameProfile = data.getProfile();
         final Multimap<String, WrappedSignedProperty> properties = gameProfile.getProperties();
+        properties.clear();
+        properties.put("textures", new WrappedSignedProperty("textures", value, signature));
 
-        final JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("timestamp", playerTextures.getTimestamp());
-        jsonObject.addProperty("profileId", profile.getUniqueId().toString());
-        jsonObject.addProperty("profileName", profile.getName());
+        profile.setProperty(new ProfileProperty("textures", value, signature));
+        profile.complete(false);
 
-        final JsonObject textureObject = new JsonObject();
-        final JsonObject skin = new JsonObject();
-        skin.addProperty("url", url);
-        final JsonObject meta = new JsonObject();
-        meta.addProperty("model", playerTextures.getSkinModel().name().toLowerCase());
-        skin.add("metadata", meta);
-        textureObject.add("SKIN", skin);
-
-        jsonObject.add("textures", textureObject);
-
-        I.log(Level.WARNING, " DEBUG Json Block looking like " + jsonObject);
-        final String encoded = Base64.getEncoder().encodeToString(jsonObject.toString().getBytes(StandardCharsets.UTF_8));
-
-        properties.get("textures").clear();
-        properties.get("textures").add(new WrappedSignedProperty("textures", encoded, null));
+        data = null;
     }
 
     public WrappedGameProfile getWrappedProfile() {
@@ -95,8 +61,8 @@ public class PlayerActor extends Actor<LivingEntity> {
     @Override
     public void updateName(final String displayName) {
         this.name = displayName;
-        this.data = null;
-        getPlayerInfoData();
+        // todo hologram thingies
+        data = null;
     }
 
 

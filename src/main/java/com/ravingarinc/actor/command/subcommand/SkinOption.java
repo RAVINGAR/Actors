@@ -63,11 +63,16 @@ public class SkinOption extends CommandOption {
                 return true;
             }
             final String fileName = args[2];
+            boolean valid = false;
             for (final String extension : client.getValidExtensions()) {
-                if (!fileName.endsWith(extension)) {
-                    sender.sendMessage(ChatColor.RED + "The file '" + fileName + "' cannot be used to update skins. The file must end with .png, .jpg or .jpeg!");
-                    return true;
+                if (fileName.endsWith(extension)) {
+                    valid = true;
+                    break;
                 }
+            }
+            if (!valid) {
+                sender.sendMessage(ChatColor.RED + "The file '" + fileName + "' cannot be used to upload skins. The file must end with .png, .jpg or .jpeg!");
+                return true;
             }
             try {
                 client.uploadSkin(sender, new File(client.getSkinFolder(), fileName), args[3]);
@@ -84,6 +89,16 @@ public class SkinOption extends CommandOption {
             } else {
                 return new ArrayList<>();
             }
+        });
+
+        addOption("save", 3, (sender, args) -> {
+            if (args.length < 4) {
+                sender.sendMessage(ChatColor.RED + "Incorrect usage - /actors skin save <url> <name>");
+                return true;
+            }
+            client.saveSkin(sender, args[2], args[3]);
+            sender.sendMessage(ChatColor.GRAY + "The url " + args[2] + " is being saved to id '" + args[3] + "'");
+            return true;
         });
 
         addOption("list", 2, (sender, args) -> {

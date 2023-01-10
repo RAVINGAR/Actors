@@ -18,8 +18,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public abstract class Actor<T extends Entity> {
 
+    /**
+     * The internal UUID used during loading and saving of actors.
+     */
     protected final UUID uuid;
     protected final T entity;
+
+    /**
+     * The entity id which is dependent on the spawn cycle of the actor.
+     */
     protected final int id;
 
     protected final ProtocolManager manager;

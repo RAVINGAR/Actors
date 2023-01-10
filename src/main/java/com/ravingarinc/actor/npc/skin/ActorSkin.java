@@ -5,31 +5,26 @@ import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.collect.Multimap;
 import com.google.gson.JsonObject;
 import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.AsynchronousException;
 import com.ravingarinc.actor.api.async.Thread;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
-import org.bukkit.profile.PlayerProfile;
-import org.bukkit.profile.PlayerTextures;
 import org.mineskin.data.Skin;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 
 public class ActorSkin {
     private final String name;
     private final List<PlayerActor> linkedActors;
-    private String uuid;
-
-    private String profileName; // Todo check if this is the same as name
+    private UUID uuid;
     private String value;
     private String signature;
     private String url;
-    private long timestamp;
 
     public ActorSkin(final String name) {
         this.name = name;
@@ -38,12 +33,13 @@ public class ActorSkin {
 
     @Thread.AsyncOnly
     public void setValues(final Skin skin) {
-        this.uuid = skin.uuid;
+        if (skin == null) {
+            throw new IllegalArgumentException("Skin was null!");
+        }
+        this.uuid = skin.data.uuid;
         this.value = skin.data.texture.value;
-        this.profileName = skin.name;
         this.signature = skin.data.texture.signature;
         this.url = skin.data.texture.url;
-        this.timestamp = skin.timestamp;
     }
 
     @Thread.AsyncOnly
@@ -73,16 +69,19 @@ public class ActorSkin {
 
     @Thread.AsyncOnly
     private void applyToProfile(final PlayerActor actor) {
-        final WrappedGameProfile gameProfile = actor.getWrappedProfile();
-        final Multimap<String, WrappedSignedProperty> properties = gameProfile.getProperties();
-        I.log(Level.WARNING, "DEBUG " + properties.toString());
-        properties.clear();
-        properties.put("textures", new WrappedSignedProperty("textures", value, signature));
+        try {
+            AsyncHandler.executeBlockingSyncComputation(() -> {
+                actor.updateProfile(value, signature);
+                return true;
+            });
+        } catch (final AsynchronousException e) {
+            I.log(Level.WARNING, "Error", e);
+        }
 
-        // todo this execution is lazy and we shouldn't just be creating threads everywhere
-        final PlayerProfile profile = actor.getProfile();
-
+        /*
         AsyncHandler.runSynchronously(() -> {
+        // todo this execution is lazy and we shouldn't just be creating threads everywhere
+
             final PlayerTextures textures = profile.getTextures();
             try {
                 textures.setSkin(new URL(url));
@@ -90,7 +89,7 @@ public class ActorSkin {
                 I.log(Level.WARNING, "Could not apply actor skin to profile!", e);
             }
             profile.setTextures(textures);
-        });
+        });*/
 
     }
 
@@ -106,9 +105,9 @@ public class ActorSkin {
     private JsonObject toJsonObject() {
         // todo do we need?
         final JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("timestamp", timestamp);
-        jsonObject.addProperty("profileId", uuid);
-        jsonObject.addProperty("profileName", profileName);
+        //jsonObject.addProperty("timestamp", timestamp);
+        //jsonObject.addProperty("profileId", uuid);
+        //jsonObject.addProperty("profileName", profileName);
 
         final JsonObject textureObject = new JsonObject();
         final JsonObject skin = new JsonObject();

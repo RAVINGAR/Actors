@@ -145,6 +145,14 @@ public class SkinClient extends Module {
         });
     }
 
+    public void saveSkin(final CommandSender sender, final String url, final String name) {
+        final CompletableFuture<Skin> skinFuture = skinClient.generateUrl(url);
+        AsyncHandler.runAsynchronously(() -> {
+            final ActorSkin skin = cachedSkins.computeIfAbsent(name, ActorSkin::new);
+            runner.queue(skin, skinFuture, sender);
+        });
+    }
+
 
     /**
      * Get a list of the names of the current files inside the skins folder.
@@ -204,7 +212,7 @@ public class SkinClient extends Module {
                 return;
             } catch (final InterruptedException e) {
                 I.log(Level.SEVERE, "SkinUploadRequest with CompletableFuture was interrupted!", e);
-            } catch (final ExecutionException e) {
+            } catch (final ExecutionException | IllegalArgumentException e) {
                 I.log(Level.SEVERE, "SkinUploadRequest encountered exception while waiting for CompletableFuture!", e);
             } catch (final TimeoutException e) {
                 I.log(Level.WARNING, "SkinUploadRequest with CompletableFuture has timed out!", e);

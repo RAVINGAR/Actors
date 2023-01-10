@@ -63,6 +63,12 @@ public class ActorManager extends Module {
         this.scheduler = plugin.getServer().getScheduler();
     }
 
+    public static UUID transformToVersion(final UUID uuid, final int version) {
+        final String string = uuid.toString();
+        final String builder = string.substring(0, 14) + version + string.substring(15);
+        return UUID.fromString(builder);
+    }
+
     @Override
     protected void load() throws ModuleLoadException {
         manager = ProtocolLibrary.getProtocolManager();
@@ -79,9 +85,7 @@ public class ActorManager extends Module {
 
     @Async.Schedule
     public void createActor(final UUID uuid, final EntityType type, final Location location, final Argument[] args) {
-        AsyncHandler.runAsynchronously(() -> {
-            factory.buildActor(uuid, type, location, args).ifPresent(this::spawnActor);
-        });
+        AsyncHandler.runAsynchronously(() -> factory.buildActor(uuid, type, location, args).ifPresent(this::spawnActor));
     }
 
     /**
@@ -98,21 +102,24 @@ public class ActorManager extends Module {
 
     @Thread.AsyncOnly
     public void spawnActor(final Actor<?> actor) {
-        I.log(Level.WARNING, "Debug -> Spawning Actor for First Time");
-        final List<PacketContainer> packets = actor.getShowPackets(actor.getSpawnLocation());
-        packets.add(0, actor.getHidePacket()); // Insert first so it gets sent first
-        packets.forEach(packet -> {
-            for (final Player player : actor.getViewers()) {
-                try {
-                    manager.sendServerPacket(player, packet);
-                } catch (final InvocationTargetException e) {
-                    I.log(Level.WARNING, "Encountered issue sending server packet to player!");
+        queue(() -> {
+            I.log(Level.WARNING, "Debug -> Spawning Actor for First Time");
+            final List<PacketContainer> packets = actor.getShowPackets(actor.getSpawnLocation());
+            final Collection<Player> viewers = actor.getViewers();
+            packets.add(0, actor.getHidePacket()); // Insert first so it gets sent first
+            packets.forEach(packet -> {
+                for (final Player player : viewers) {
+                    try {
+                        manager.sendServerPacket(player, packet);
+                    } catch (final InvocationTargetException e) {
+                        I.log(Level.WARNING, "Encountered issue sending server packet to player!");
+                    }
                 }
-            }
+            });
+            // This is done AFTER the packets have been sent such that Actor Packet Interceptor does not spawn the entity
+            // twice!
+            cachedActors.put(actor.getId(), actor);
         });
-        // This is done AFTER the packets have been sent such that Actor Packet Interceptor does not spawn the entity
-        // twice!
-        cachedActors.put(actor.getId(), actor);
     }
 
     /**
@@ -140,12 +147,14 @@ public class ActorManager extends Module {
 
     @Async.Schedule
     public void processOnActorDestroy(final Player player, final List<Integer> ids) {
-        queueAsync(() -> {
-            ids.stream().map(cachedActors::get).findFirst().ifPresent(actor -> {
-                I.log(Level.WARNING, "Debug -> Listening for Destroy Actor");
-                actor.removeViewer(player);
-            });
-        });
+        for (final Integer id : ids) {
+            if (id != null && cachedActors.containsKey(id)) {
+                queueAsync(() -> {
+                    I.log(Level.WARNING, "Debug -> Listening for Destroy Actor with id ");
+                    cachedActors.get(id).removeViewer(player);
+                });
+            }
+        }
     }
 
     /**
@@ -204,12 +213,6 @@ public class ActorManager extends Module {
                 I.log(Level.SEVERE, "Encountered issue sending server packet to player!", e);
             }
         });
-    }
-
-    private UUID transformToVersion(final UUID uuid, final int version) {
-        final String string = uuid.toString();
-        final String builder = string.substring(0, 14) + version + string.substring(15);
-        return UUID.fromString(builder);
     }
 
     public Actor<?> getActor(final int id) {
