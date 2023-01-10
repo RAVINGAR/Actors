@@ -1,7 +1,7 @@
 package com.ravingarinc.actor.file.sql;
 
 @SuppressWarnings("PMD.FieldNamingConventions")
-public class Schema {
+public class ActorSchema {
     public static final String ACTORS = "players";
 
     public static final String EXAMPLE_1 = "key";

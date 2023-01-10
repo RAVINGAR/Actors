@@ -3,8 +3,8 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 plugins {
     id 'java-library'
     id 'pmd'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
     id 'net.minecrell.plugin-yml.bukkit' version '0.5.1'
-    id 'dev.s7a.gradle.minecraft.server' version '2.0.0'
 }
 
 group = 'com.ravingarinc.actor'
@@ -13,7 +13,6 @@ version = '1.0-SNAPSHOT'
 repositories {
     gradlePluginPortal()
     mavenCentral()
-
 
     maven {
         name = 'spigotmc-repo'
@@ -50,8 +49,9 @@ repositories {
 
 dependencies {
     implementation 'org.jetbrains:annotations:23.1.0'
+    implementation 'org.mineskin:java-client:1.2.4-SNAPSHOT'
+    runtimeOnly 'org.mineskin:java-client:1.2.4-SNAPSHOT'
     bukkitLibrary 'javax.vecmath:vecmath:1.5.2'
-    bukkitLibrary 'org.mineskin:java-client:1.2.4-SNAPSHOT'
     compileOnly 'org.spigotmc:spigot-api:1.19.2-R0.1-SNAPSHOT'
     compileOnly 'net.Indyuce:MMOItems-API:6.8.3-SNAPSHOT'
     compileOnly 'io.lumine:MythicLib-dist:1.4.2-SNAPSHOT'
@@ -60,6 +60,19 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
 }
+
+shadowJar {
+    archiveBaseName.set('Actors')
+    archiveClassifier.set('')
+    archiveVersion.set('')
+    relocate 'org.mineskin', 'com.ravingarinc.actor.lib.mineskin'
+}
+
+artifacts {
+    archives shadowJar
+}
+
+assemble.dependsOn shadowJar
 
 def targetJavaVersion = 17
 java {
@@ -76,29 +89,13 @@ tasks.withType(JavaCompile).configureEach {
         options.release = targetJavaVersion
     }
 }
-/*
-tasks.register("launch", LaunchMinecraftServerTask)  {
-    dependsOn("build")
-    serverDirectory = project.layout.projectDirectory.dir("../../Desktop/Programming/Server")
-
-    doFirst {
-        copy {
-            from(buildDir.resolve("libs/${project.name}.jar"))
-            into("${serverDirectory}/plugins")
-        }
-    }
-    jarUrl = LaunchMinecraftServerTask.JarUrl.Paper("1.18.2")
-    agreeEula = true
-
-    jvmArguments = ['-Xmx2G', '-Xms2G']
-}*/
 
 tasks.register("copyToDev", Copy) {
-    from jar
+    from shadowJar
     into project.layout.projectDirectory.dir("../../Desktop/Programming/Server/plugins")
 }
 
-jar.finalizedBy copyToDev
+assemble.finalizedBy copyToDev
 
 javadoc {
     options.encoding 'UTF-8'

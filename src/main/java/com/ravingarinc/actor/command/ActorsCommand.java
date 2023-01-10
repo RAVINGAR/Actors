@@ -4,6 +4,7 @@ import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.command.subcommand.NPCOption;
 import com.ravingarinc.actor.command.subcommand.SkinOption;
 import com.ravingarinc.actor.npc.skin.SkinClient;
+import org.bukkit.ChatColor;
 
 public class ActorsCommand extends BaseCommand {
 
@@ -15,6 +16,7 @@ public class ActorsCommand extends BaseCommand {
         // the user is currently typing.
         addOption("reload", 2, (sender, args) -> {
             plugin.reload();
+            sender.sendMessage(ChatColor.GRAY + "Actors has been reloaded!");
             return true;
         });
 

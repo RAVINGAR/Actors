@@ -3,6 +3,8 @@ package com.ravingarinc.actor.npc.skin;
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
+import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.Thread;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.file.ConfigManager;
 import com.ravingarinc.actor.npc.ActorManager;
@@ -103,12 +105,11 @@ public class SkinClient extends Module {
         if (!skinFolder.exists()) {
             skinFolder.mkdir();
         }
-        getValidFileNames();
-        final SkinRunner lastRunner = runner;
-        runner = new SkinRunner();
-        if (lastRunner != null) {
-            runner.queue.addAll(lastRunner.getRemaining());
+        final SkinRunner newRunner = new SkinRunner();
+        if (runner != null) {
+            newRunner.queue.addAll(runner.getRemaining());
         }
+        runner = newRunner;
         runner.runTaskTimerAsynchronously(plugin, 0, 5);
     }
 
@@ -121,15 +122,27 @@ public class SkinClient extends Module {
      *
      * @param actor The actor
      */
+    @Thread.AsyncOnly
     public void unlinkActorAll(final PlayerActor actor) {
         cachedSkins.values().forEach(skin -> skin.unlinkActor(actor));
     }
 
+    /**
+     * Upload a new skin, to either a new ActorSkin or applying it to an already existing ActorSkin object. This queues
+     * the task on an asynchronous thread.
+     *
+     * @param sender
+     * @param file
+     * @param name   Name of the skin. Generally, this must be unique!
+     * @throws FileNotFoundException Thrown if file does not exist!
+     */
+    @Async.Schedule
     public void uploadSkin(final CommandSender sender, final File file, final String name) throws FileNotFoundException {
         final CompletableFuture<Skin> skinFuture = skinClient.generateUpload(file, SkinOptions.create(name, Variant.AUTO, Visibility.PUBLIC));
-        final ActorSkin skin = new ActorSkin(name);
-        cachedSkins.put(name, skin);
-        runner.queue(skin, skinFuture, sender);
+        AsyncHandler.runAsynchronously(() -> {
+            final ActorSkin skin = cachedSkins.computeIfAbsent(name, ActorSkin::new);
+            runner.queue(skin, skinFuture, sender);
+        });
     }
 
 
@@ -154,6 +167,7 @@ public class SkinClient extends Module {
             this.queue = new ConcurrentLinkedQueue<>();
         }
 
+        @Thread.AsyncOnly
         public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
             this.queue.add(new SkinUploadRequest(skin, future, sender));
         }
@@ -181,12 +195,11 @@ public class SkinClient extends Module {
             this.sender = sender;
         }
 
-
-        @Async.Execute
         @Blocking
         public void waitForResult() {
             try {
                 actorSkin.setValues(future.get(30, TimeUnit.SECONDS));
+                AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + actorSkin.getName() + "'!"));
                 actorSkin.apply(actorManager);
                 return;
             } catch (final InterruptedException e) {
@@ -196,11 +209,11 @@ public class SkinClient extends Module {
             } catch (final TimeoutException e) {
                 I.log(Level.WARNING, "SkinUploadRequest with CompletableFuture has timed out!", e);
                 if (sender != null) {
-                    plugin.getServer().getScheduler().runTask(plugin,
-                            () -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + actorSkin.getName() + "' as the request timed out! Try again later!"));
+                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + actorSkin.getName() + "' as the request timed out! Try again later!"));
                 }
             }
             actorSkin.discard(actorManager);
+            cachedSkins.remove(actorSkin.getName());
         }
     }
 }

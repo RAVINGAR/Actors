@@ -45,7 +45,7 @@ public class SQLHandler extends Module {
             } catch (final SQLException exception) {
                 throw new ModuleLoadException(this, exception);
             }
-            if (!execute(Schema.createTable)) {
+            if (!execute(ActorSchema.createTable)) {
                 throw new ModuleLoadException(this, ModuleLoadException.Reason.SQL);
             }
         }

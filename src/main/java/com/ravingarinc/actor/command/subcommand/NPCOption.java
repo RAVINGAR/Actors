@@ -42,7 +42,7 @@ public class NPCOption extends CommandOption {
         });
         registerArgument("--skin", 1, () -> client.getSkins().stream().toList(), (object, args) -> {
             if (object instanceof PlayerActor playerActor) {
-                final ActorSkin skin = client.getSkin(args[0].toLowerCase());
+                final ActorSkin skin = client.getSkin(args[0]);
                 if (skin != null) {
                     skin.linkActor(playerActor);
                 }
@@ -62,6 +62,7 @@ public class NPCOption extends CommandOption {
                 }
                 try {
                     manager.createActor(type, player.getLocation(), parseArguments(3, args));
+                    sender.sendMessage(ChatColor.GREEN + "Created a new NPC with the given arguments!");
                 } catch (final Argument.InvalidArgumentException exception) {
                     sender.sendMessage(ChatColor.RED + exception.getMessage());
                 }

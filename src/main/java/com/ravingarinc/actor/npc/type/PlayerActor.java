@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 
 public class PlayerActor extends Actor<LivingEntity> {
@@ -33,11 +34,11 @@ public class PlayerActor extends Actor<LivingEntity> {
     private PlayerInfoData data = null;
 
 
-    public PlayerActor(final PlayerProfile profile, final LivingEntity entity, final Location spawnLocation, final ProtocolManager manager) {
-        super(profile.getUniqueId(), entity, spawnLocation, manager);
-        this.name = profile.getName();
+    public PlayerActor(final UUID uuid, final PlayerProfile profile, final LivingEntity entity, final Location spawnLocation, final ProtocolManager manager) {
+        super(uuid, entity, spawnLocation, manager);
+        this.name = "";
         this.profile = profile;
-        this.gameProfile = new WrappedGameProfile(uuid, "");
+        this.gameProfile = new WrappedGameProfile(uuid, null);
     }
 
     /**
@@ -55,6 +56,7 @@ public class PlayerActor extends Actor<LivingEntity> {
             return;
         }
         profile.setTextures(playerTextures);
+
 
         final PlayerInfoData data = getPlayerInfoData();
         final WrappedGameProfile gameProfile = data.getProfile();
@@ -82,8 +84,12 @@ public class PlayerActor extends Actor<LivingEntity> {
         properties.get("textures").add(new WrappedSignedProperty("textures", encoded, null));
     }
 
-    public WrappedGameProfile getGameProfile() {
+    public WrappedGameProfile getWrappedProfile() {
         return gameProfile;
+    }
+
+    public PlayerProfile getProfile() {
+        return profile;
     }
 
     @Override

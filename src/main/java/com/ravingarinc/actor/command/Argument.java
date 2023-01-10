@@ -17,9 +17,9 @@ public class Argument {
     /**
      * An argument for a command. This will transform a given type of object based on the command.
      *
-     * @param prefix   The prefix in the format --
+     * @param prefix   The prefix in the format '--'
      * @param minArgs  The passed args.length must be equal to or greater than this value
-     * @param consumer The consumer of the object
+     * @param consumer The consumer of the object. This may be executed async or sync.
      * @param args     Can be null, however if not null it is expected this contains all arguments after the preceding
      *                 --arg (as specified by prefix) but up to the next --arg
      */

@@ -68,7 +68,21 @@ public class AsyncHandler {
         scheduler.scheduleSyncDelayedTask(plugin, () -> consumer.accept(value));
     }
 
+    /**
+     * Run a task asynchronously on a new thread
+     *
+     * @param runnable The runnable
+     */
     public static void runAsynchronously(final Runnable runnable) {
         scheduler.runTaskAsynchronously(plugin, runnable);
+    }
+
+    /**
+     * Run a task synchronously on a new thread.
+     *
+     * @param runnable The runnable
+     */
+    public static void runSynchronously(final Runnable runnable) {
+        scheduler.runTask(plugin, runnable);
     }
 }

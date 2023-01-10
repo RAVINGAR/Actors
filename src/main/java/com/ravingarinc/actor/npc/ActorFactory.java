@@ -2,18 +2,29 @@ package com.ravingarinc.actor.npc;
 
 import com.comphenix.protocol.ProtocolManager;
 import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.AsynchronousException;
+import com.ravingarinc.actor.api.async.Thread;
+import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.actor.api.util.Pair;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.profile.PlayerProfile;
+import org.jetbrains.annotations.Blocking;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class ActorFactory {
-
+    private final static String ACTOR_META = "actor-meta";
     private final ProtocolManager manager;
     private final RavinPlugin plugin;
 
@@ -22,18 +33,40 @@ public class ActorFactory {
         this.plugin = plugin;
     }
 
+    @Thread.AsyncOnly
+    @Blocking
     public Optional<Actor<?>> buildActor(final UUID uuid, final EntityType type, final Location location, final Argument[] args) {
-        return Optional.ofNullable(switch (type) {
-            case PLAYER -> buildPlayerActor(uuid, location, args);
-            default -> null;
-        });
+        try {
+            return Optional.ofNullable(switch (type) {
+                case PLAYER -> buildPlayerActor(uuid, location, args);
+                default -> null;
+            });
+        } catch (final AsynchronousException exception) {
+            I.log(Level.SEVERE, "Encountered exception whilst building actor!", exception);
+        }
+        return Optional.empty();
     }
 
-    private Actor<?> buildPlayerActor(final UUID uuid, final Location location, final Argument[] args) {
-        final LivingEntity entity = (LivingEntity) location.getWorld().spawnEntity(location, EntityType.HUSK, false);
-        entity.setAI(false);
-        entity.setInvulnerable(true);
-        final PlayerActor actor = new PlayerActor(plugin.getServer().createPlayerProfile(uuid, ""), entity, location, manager);
+    @Thread.AsyncOnly
+    @Blocking
+    private Actor<?> buildPlayerActor(final UUID uuid, final Location location, final Argument[] args) throws AsynchronousException {
+        final Pair<Object[], List<Player>> computations = AsyncHandler.executeBlockingSyncComputation(() -> {
+            final Object[] array = new Object[2];
+
+            array[0] = plugin.getServer().createPlayerProfile(uuid);
+
+            final World world = location.getWorld();
+            final LivingEntity entity = (LivingEntity) world.spawnEntity(location, EntityType.HUSK, false);
+            entity.setAI(false);
+            entity.setInvulnerable(true);
+            array[1] = entity;
+
+            return new Pair<>(array, world.getPlayers());
+        });
+
+        final Object[] array = computations.getLeft();
+        final PlayerActor actor = new PlayerActor(uuid, (PlayerProfile) array[0], (LivingEntity) array[1], location, manager);
+        computations.getRight().forEach(actor::addViewer);
         for (final Argument arg : args) {
             arg.consume(actor);
         }
