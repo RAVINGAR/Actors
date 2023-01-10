@@ -4,7 +4,7 @@ import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.Thread;
+import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.file.ConfigManager;
 import com.ravingarinc.actor.npc.ActorManager;
@@ -122,7 +122,7 @@ public class SkinClient extends Module {
      *
      * @param actor The actor
      */
-    @Thread.AsyncOnly
+    @Sync.AsyncOnly
     public void unlinkActorAll(final PlayerActor actor) {
         cachedSkins.values().forEach(skin -> skin.unlinkActor(actor));
     }
@@ -175,7 +175,7 @@ public class SkinClient extends Module {
             this.queue = new ConcurrentLinkedQueue<>();
         }
 
-        @Thread.AsyncOnly
+        @Sync.AsyncOnly
         public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
             this.queue.add(new SkinUploadRequest(skin, future, sender));
         }

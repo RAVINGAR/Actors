@@ -81,23 +81,18 @@ public abstract class Actor<T extends Entity> {
         return new HashSet<>(viewers.values());
     }
 
-    /**
-     * Creates a list of packets required to show an actor to a player. This differs based on the entity hence
-     * why there may be different packets
-     */
-    public abstract List<PacketContainer> getShowPackets(Vector3 location);
+    public abstract PacketContainer getPreSpawnPacket();
 
-    /**
-     * Creates a list containing the necessary packets to refresh/update an entity.
-     */
-    public abstract List<PacketContainer> getUpdatePackets();
+    public abstract PacketContainer getSpawnPacket(Vector3 location);
+
+    public abstract PacketContainer getHidePacket();
 
     public void updateName(final String displayName) {
         this.entity.setCustomName(displayName);
         this.entity.setCustomNameVisible(true);
     }
 
-    public PacketContainer getHidePacket() {
+    public PacketContainer getRemovePacket() {
         final PacketContainer container = manager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
         final List<Integer> list = new ArrayList<>();
         list.add(id);

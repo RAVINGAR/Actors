@@ -5,10 +5,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-public final class Thread {
+public final class Sync {
 
-    private Thread() {
-        throw new AssertionError("Thread should not be instantiated");
+    private Sync() {
+        throw new AssertionError("Sync should not be instantiated");
     }
 
     /**
