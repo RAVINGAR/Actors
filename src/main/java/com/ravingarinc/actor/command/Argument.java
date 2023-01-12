@@ -33,6 +33,7 @@ public class Argument {
 
     /**
      * Consume the value only if args is not null and its length is equal to or exceeds minArgs.
+     * This should only ever be called by the actor through {@link com.ravingarinc.actor.npc.type.Actor#applyArgument(Argument)}
      *
      * @param value The value
      */
@@ -41,6 +42,23 @@ public class Argument {
             throw new IllegalArgumentException("Cannot consume arguments as this Argument object does not have any args!");
         }
         consumer.accept(value, args);
+    }
+
+    public String getPrefix() {
+        return prefix;
+    }
+
+    @Override
+    public String toString() {
+        if (args == null) {
+            throw new IllegalArgumentException("Cannot get arguments as this Argument object does not have any args!");
+        }
+        final StringBuilder builder = new StringBuilder(prefix);
+        for (final String arg : args) {
+            builder.append(" ");
+            builder.append(arg);
+        }
+        return builder.toString();
     }
 
     @Nullable

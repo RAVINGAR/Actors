@@ -6,8 +6,13 @@ import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NonBlocking;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 
@@ -32,10 +37,15 @@ public class AsyncHandler {
      */
     @Async.Execute
     @Blocking
+    @Nullable
     public static <V> V executeBlockingSyncComputation(final Callable<V> callable) throws AsynchronousException {
-        final TaskCallback<V> callback = new TaskCallback<>(callable);
-        scheduler.scheduleSyncDelayedTask(plugin, callback);
-        return callback.get();
+        final FutureTask<V> task = new FutureTask<>(callable);
+        scheduler.scheduleSyncDelayedTask(plugin, task);
+        try {
+            return task.get(500, TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
+            throw new AsynchronousException("Encountered attempting to get value from sync execution!", e);
+        }
     }
 
     /**

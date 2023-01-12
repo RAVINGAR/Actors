@@ -4,13 +4,10 @@ import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.function.Supplier;
 
 public class CommandOption {
     private final Map<String, CommandOption> options;
@@ -31,10 +28,6 @@ public class CommandOption {
 
     public void setFunction(final BiFunction<CommandSender, String[], Boolean> function) {
         this.function = function;
-    }
-
-    public Map<String, Argument> getArgumentTypes() {
-        return argumentTypes;
     }
 
     /**
@@ -110,35 +103,5 @@ public class CommandOption {
         }
 
         return null;
-    }
-
-    protected Argument[] parseArguments(final int index, final String[] args) throws Argument.InvalidArgumentException {
-        final List<Argument> arguments = new ArrayList<>();
-        Argument lastArg = null;
-        final List<String> lastStrings = new ArrayList<>();
-        for (int i = index; i < args.length; i++) {
-            if (args[i].startsWith("--")) {
-                if (lastArg != null) {
-                    arguments.add(lastArg.createArgument(lastStrings.toArray(new String[0])));
-                    lastStrings.clear();
-                }
-                lastArg = argumentTypes.get(args[i]);
-            } else if (lastArg != null) {
-                lastStrings.add(args[i]);
-            }
-            if (i + 1 == args.length && lastArg != null) {
-                arguments.add(lastArg.createArgument(lastStrings.toArray(new String[0])));
-                lastStrings.clear();
-            }
-        }
-        return arguments.toArray(new Argument[0]);
-    }
-
-    protected void registerArgument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiConsumer<Object, String[]> consumer) {
-        argumentTypes.put(prefix, new Argument(prefix, minArgs, tabCompletions, consumer, null));
-    }
-
-    protected void registerArgument(final String prefix, final int minArgs, final BiConsumer<Object, String[]> consumer) {
-        this.registerArgument(prefix, minArgs, null, consumer);
     }
 }

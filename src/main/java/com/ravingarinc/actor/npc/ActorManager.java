@@ -12,19 +12,18 @@ import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
-import com.ravingarinc.actor.npc.factory.ActorFactory;
 import com.ravingarinc.actor.npc.skin.ActorSkin;
 import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,8 +45,6 @@ import java.util.logging.Level;
 public class ActorManager extends Module {
 
     private final Map<Integer, Actor<?>> cachedActors;
-
-    private final BukkitScheduler scheduler;
     private BlockingRunner<FutureTask<?>> runner;
     private BlockingRunner<DelayedFutureTask> delayedRunner;
     private SkinClient client;
@@ -64,7 +61,6 @@ public class ActorManager extends Module {
     public ActorManager(final RavinPlugin plugin) {
         super(ActorManager.class, plugin);
         this.cachedActors = new ConcurrentHashMap<>();
-        this.scheduler = plugin.getServer().getScheduler();
     }
 
     public static UUID transformToVersion(final UUID uuid, final int version) {
@@ -104,6 +100,10 @@ public class ActorManager extends Module {
     @Sync.AsyncOnly
     public void createActor(final String type, final UUID uuid, final Vector3 location, final Argument[] args) {
         ActorFactory.build(type, uuid, location, args).ifPresent(this::spawnActor);
+    }
+
+    public Collection<Actor<?>> getActors() {
+        return new HashSet<>(cachedActors.values());
     }
 
     /**

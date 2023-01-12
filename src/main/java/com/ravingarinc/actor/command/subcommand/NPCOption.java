@@ -5,8 +5,9 @@ import com.ravingarinc.actor.api.async.AsyncHandler;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.CommandOption;
+import com.ravingarinc.actor.command.Registry;
+import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
-import com.ravingarinc.actor.npc.factory.ActorFactory;
 import com.ravingarinc.actor.npc.skin.ActorSkin;
 import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
@@ -31,13 +32,14 @@ public class NPCOption extends CommandOption {
     }
 
     private void registerArguments() {
-        registerArgument("--name", 1, (object, args) -> {
+        Registry.registerArgument(Registry.ACTOR_ARGS, "--name", 1, (object, args) -> {
             if (object instanceof Actor<?> actor) {
                 actor.updateName(args[0]);
             }
         });
-        registerArgument("--skin", 1, () -> client.getSkins().stream().toList(), (object, args) -> {
+        Registry.registerArgument(Registry.ACTOR_ARGS, "--skin", 1, () -> client.getSkins().stream().toList(), (object, args) -> {
             if (object instanceof PlayerActor playerActor) {
+                // todo make this --skin actually parse as a uuid when saved to the actor for the database!
                 final ActorSkin skin = client.getSkin(args[0]);
                 if (skin != null) {
                     skin.linkActor(playerActor);
@@ -55,7 +57,7 @@ public class NPCOption extends CommandOption {
                     return true;
                 }
                 try {
-                    final Argument[] arguments = parseArguments(3, args);
+                    final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 3, args);
                     final Vector3 location = new Vector3(player.getLocation());
                     AsyncHandler.runAsynchronously(() -> manager.createActor(argType, location, arguments));
                     sender.sendMessage(ChatColor.GREEN + "Created a new NPC with the given arguments!");
@@ -70,7 +72,7 @@ public class NPCOption extends CommandOption {
             if (args.length == 3) {
                 return ActorFactory.getTypes();
             } else if (args[args.length - 2].startsWith("--")) {
-                final Argument argument = getArgumentTypes().get(args[args.length - 2]);
+                final Argument argument = Registry.getArgumentTypes(Registry.ACTOR_ARGS).get(args[args.length - 2]);
                 if (argument == null) {
                     return null;
                 }
@@ -81,7 +83,7 @@ public class NPCOption extends CommandOption {
                 }
                 return list;
             } else {
-                return getArgumentTypes().keySet().stream().toList();
+                return Registry.getArgumentTypes(Registry.ACTOR_ARGS).keySet().stream().toList();
             }
         });
 

@@ -19,6 +19,8 @@ public class Vector3 extends Vector3d {
 
     private final World world;
 
+    private final String worldName;
+
     @Sync.SyncOnly
     public Vector3(final Location location) {
         this(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), location.getWorld());
@@ -41,6 +43,12 @@ public class Vector3 extends Vector3d {
         this.yaw = yaw;
         this.pitch = pitch;
         this.world = world;
+        this.worldName = world == null ? null : world.getName();
+    }
+
+    @Nullable
+    public String getWorldName() {
+        return worldName;
     }
 
     /**

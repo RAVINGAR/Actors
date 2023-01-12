@@ -4,11 +4,14 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.command.Argument;
+import com.ravingarinc.actor.npc.ActorFactory;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,19 +26,37 @@ public abstract class Actor<T extends Entity> {
     protected final UUID uuid;
     protected final T entity;
 
+    protected final ActorFactory.Type<?> type;
+
     /**
      * The entity id which is dependent on the spawn cycle of the actor.
      */
     protected final int id;
     protected final Map<UUID, Player> viewers;
+    protected final Map<String, String> appliedArguments;
     protected Vector3 spawnLocation;
 
-    public Actor(final UUID uuid, final T entity, final Vector3 spawnLocation) {
+    public Actor(final ActorFactory.Type<?> type, final UUID uuid, final T entity, final Vector3 spawnLocation) {
         this.uuid = uuid;
+        this.type = type;
         this.entity = entity;
         this.id = entity.getEntityId();
         this.spawnLocation = spawnLocation;
         this.viewers = new ConcurrentHashMap<>();
+        this.appliedArguments = new HashMap<>();
+    }
+
+    public ActorFactory.Type<?> getType() {
+        return type;
+    }
+
+    public void applyArgument(final Argument argument) {
+        argument.consume(this);
+        appliedArguments.put(argument.getPrefix(), argument.toString());
+    }
+
+    public List<String> getAppliedArguments() {
+        return new ArrayList<>(appliedArguments.values());
     }
 
     public Vector3 getSpawnLocation() {

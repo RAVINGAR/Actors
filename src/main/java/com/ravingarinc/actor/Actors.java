@@ -5,6 +5,7 @@ import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.ActorPacketInterceptor;
 import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.storage.ConfigManager;
+import com.ravingarinc.actor.storage.sql.ActorDatabase;
 
 public final class Actors extends RavinPlugin {
     @Override
@@ -15,6 +16,9 @@ public final class Actors extends RavinPlugin {
         addModule(ActorManager.class);
         addModule(SkinClient.class);
         addModule(ActorPacketInterceptor.class);
+
+        //load databases
+        addModule(ActorDatabase.class);
         //addModule(SQLHandler.class); // comment out if not needed
         // add listeners
 

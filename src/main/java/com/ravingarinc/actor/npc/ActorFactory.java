@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.npc.factory;
+package com.ravingarinc.actor.npc;
 
 import com.ravingarinc.actor.api.AsyncFunction;
 import com.ravingarinc.actor.api.async.AsyncHandler;
@@ -43,7 +43,7 @@ public class ActorFactory {
         final PlayerActor actor = new PlayerActor(uuid, entity, location);
         computations.getRight().forEach(actor::addViewer);
         for (final Argument arg : args) {
-            arg.consume(actor);
+            actor.applyArgument(arg);
         }
         return actor;
     });
@@ -58,7 +58,7 @@ public class ActorFactory {
         return new ArrayList<>(actorTypes.keySet());
     }
 
-    public static <T extends Actor<?>> Optional<T> build(final Type<T> type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
+    protected static <T extends Actor<?>> Optional<T> build(final Type<T> type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
         try {
             return Optional.ofNullable(type.build(uuid, location, arguments));
         } catch (final AsynchronousException e) {
@@ -77,7 +77,7 @@ public class ActorFactory {
      * @param arguments Any other arguments
      * @return An optional which may or may not contain the given actor.
      */
-    public static Optional<? extends Actor<?>> build(final String type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
+    protected static Optional<? extends Actor<?>> build(final String type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
         final Type<?> actorType = actorTypes.get(type.toLowerCase());
         if (actorType == null) {
             return Optional.empty();
