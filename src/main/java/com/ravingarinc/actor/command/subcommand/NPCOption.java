@@ -1,15 +1,17 @@
 package com.ravingarinc.actor.command.subcommand;
 
 import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.npc.factory.ActorFactory;
 import com.ravingarinc.actor.npc.skin.ActorSkin;
 import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -20,16 +22,10 @@ public class NPCOption extends CommandOption {
 
     private final SkinClient client;
 
-    private final List<String> entityTypes;
-
     public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
         super(parent, 2, (sender, args) -> false);
         this.manager = plugin.getModule(ActorManager.class);
         this.client = plugin.getModule(SkinClient.class);
-        this.entityTypes = new ArrayList<>();
-        for (final EntityType t : EntityType.values()) {
-            entityTypes.add(t.name().toLowerCase());
-        }
         registerArguments();
         registerOptions();
     }
@@ -53,15 +49,15 @@ public class NPCOption extends CommandOption {
     private void registerOptions() {
         addOption("create", 3, (sender, args) -> {
             if (sender instanceof Player player) {
-                final EntityType type;
-                try {
-                    type = EntityType.valueOf(args[2].toUpperCase().replace("-", "_"));
-                } catch (final IllegalArgumentException e) {
-                    sender.sendMessage(ChatColor.RED + "Unknown entity type called " + args[2] + "!");
+                final String argType = args[2].toLowerCase().replace("-", "_");
+                if (!ActorFactory.getTypes().contains(argType)) {
+                    sender.sendMessage(ChatColor.RED + "Unknown actor type called " + args[2] + "!");
                     return true;
                 }
                 try {
-                    manager.createActor(type, player.getLocation(), parseArguments(3, args));
+                    final Argument[] arguments = parseArguments(3, args);
+                    final Vector3 location = new Vector3(player.getLocation());
+                    AsyncHandler.runAsynchronously(() -> manager.createActor(argType, location, arguments));
                     sender.sendMessage(ChatColor.GREEN + "Created a new NPC with the given arguments!");
                 } catch (final Argument.InvalidArgumentException exception) {
                     sender.sendMessage(ChatColor.RED + exception.getMessage());
@@ -72,7 +68,7 @@ public class NPCOption extends CommandOption {
             return true;
         }).buildTabCompletions((player, args) -> {
             if (args.length == 3) {
-                return entityTypes;
+                return ActorFactory.getTypes();
             } else if (args[args.length - 2].startsWith("--")) {
                 final Argument argument = getArgumentTypes().get(args[args.length - 2]);
                 if (argument == null) {

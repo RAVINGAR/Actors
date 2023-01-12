@@ -7,34 +7,36 @@ import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.BlockingRunner;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
+import com.ravingarinc.actor.npc.factory.ActorFactory;
 import com.ravingarinc.actor.npc.skin.ActorSkin;
 import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
-import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Async;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
@@ -46,8 +48,8 @@ public class ActorManager extends Module {
     private final Map<Integer, Actor<?>> cachedActors;
 
     private final BukkitScheduler scheduler;
-    private ActorFactory factory;
-    private ActorTaskRunner runner;
+    private BlockingRunner<FutureTask<?>> runner;
+    private BlockingRunner<DelayedFutureTask> delayedRunner;
     private SkinClient client;
     private ProtocolManager manager;
 
@@ -71,33 +73,43 @@ public class ActorManager extends Module {
         return UUID.fromString(builder);
     }
 
-    public ProtocolManager getProtocolManager() {
-        return manager;
-    }
 
     @Override
     protected void load() throws ModuleLoadException {
+        client = plugin.getModule(SkinClient.class);
         manager = ProtocolLibrary.getProtocolManager();
-        client = new SkinClient(plugin);
-        factory = new ActorFactory(plugin, manager);
-        runner = new ActorTaskRunner();
-        runner.runTaskTimerAsynchronously(plugin, 0, 1);
+
+        runner = new BlockingRunner<>(new LinkedBlockingQueue<>());
+        runner.runTaskAsynchronously(plugin);
+
+        delayedRunner = new BlockingRunner<>(new DelayQueue<>());
+        delayedRunner.runTaskAsynchronously(plugin);
     }
 
-    @Async.Schedule
-    public void createActor(final EntityType type, final Location location, final Argument[] args) {
-        createActor(transformToVersion(UUID.randomUUID(), 2), type, location, args);
+    @Override
+    public void cancel() {
+        delayedRunner.cancel();
+        runner.cancel();
+
+        cachedActors.values().forEach(actor -> {
+            actor.getEntity().remove();
+        });
     }
 
-    @Async.Schedule
-    public void createActor(final UUID uuid, final EntityType type, final Location location, final Argument[] args) {
-        AsyncHandler.runAsynchronously(() -> factory.buildActor(uuid, type, location, args).ifPresent(this::spawnActor));
+    @Sync.AsyncOnly
+    public void createActor(final String type, final Vector3 location, final Argument[] args) {
+        createActor(type, transformToVersion(UUID.randomUUID(), 2), location, args);
+    }
+
+    @Sync.AsyncOnly
+    public void createActor(final String type, final UUID uuid, final Vector3 location, final Argument[] args) {
+        ActorFactory.build(type, uuid, location, args).ifPresent(this::spawnActor);
     }
 
     /**
      * Load existing actor from the database.
      *
-     * @param uuid
+     * @param uuid the existing UUID
      */
     public void loadActor(final UUID uuid) {
 
@@ -110,9 +122,9 @@ public class ActorManager extends Module {
     public void spawnActor(final Actor<?> actor) {
         queue(() -> {
             final List<PacketContainer> packets = new ArrayList<>();
-            packets.add(actor.getRemovePacket());
-            packets.add(actor.getPreSpawnPacket());
-            packets.add(actor.getSpawnPacket(actor.getSpawnLocation()));
+            packets.add(actor.getRemovePacket(manager));
+            packets.add(actor.getPreSpawnPacket(manager));
+            packets.add(actor.getSpawnPacket(actor.getSpawnLocation(), manager));
             final Collection<Player> viewers = actor.getViewers();
             packets.forEach(packet -> {
                 for (final Player viewer : viewers) {
@@ -125,60 +137,59 @@ public class ActorManager extends Module {
             });
             // This is done AFTER the packets have been sent such that Actor Packet Interceptor does not spawn the entity
             // twice!
-
         });
-        scheduler.runTaskLaterAsynchronously(plugin, () -> {
-            queue(() -> {
-                final Collection<Player> viewers = actor.getViewers();
-                final PacketContainer packet = actor.getHidePacket();
-                viewers.forEach(viewer -> {
-                    try {
-                        manager.sendServerPacket(viewer, packet);
-                    } catch (final InvocationTargetException e) {
-                        I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
-                    }
-                });
-                cachedActors.put(actor.getId(), actor);
+        queueLater(() -> {
+            final Collection<Player> viewers = actor.getViewers();
+            final PacketContainer packet = actor.getHidePacket(manager);
+            viewers.forEach(viewer -> {
+                try {
+                    manager.sendServerPacket(viewer, packet);
+                } catch (final InvocationTargetException e) {
+                    I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
+                }
             });
+            cachedActors.put(actor.getId(), actor);
         }, 5L);
-
     }
 
     /**
-     * Show a given actor to a specific location at the given location. This queues an asynchronous execution.
+     * Show a given actor to a specific location at the given location.
      *
      * @param actor    The actor
      * @param player   The player
      * @param location The location
      */
-    @Async.Schedule
+    @Sync.AsyncOnly
     public void processActorSpawn(final Actor<?> actor, final Player player, final Vector3 location) {
-        queueAsync(() -> {
-            I.log(Level.WARNING, "Debug -> Listener for Spawn Actor");
+        queue(() -> {
             actor.addViewer(player);
             try {
-                manager.sendServerPacket(player, actor.getPreSpawnPacket());
-                manager.sendServerPacket(player, actor.getSpawnPacket(location));
+                manager.sendServerPacket(player, actor.getPreSpawnPacket(manager));
+                manager.sendServerPacket(player, actor.getSpawnPacket(location, manager));
             } catch (final InvocationTargetException e) {
                 I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
                 actor.removeViewer(player);
             }
         });
-        scheduler.runTaskLater(plugin, () -> queueAsync(() -> {
+
+        queueLater(() -> {
             try {
-                manager.sendServerPacket(player, actor.getHidePacket());
+                manager.sendServerPacket(player, actor.getHidePacket(manager));
             } catch (final InvocationTargetException e) {
                 I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
                 actor.removeViewer(player);
             }
-        }), 5L);
+        }, 5L);
     }
 
-    @Async.Schedule
+    @Sync.AsyncOnly
     public void processOnActorDestroy(final Player player, final List<Integer> ids) {
         for (final Integer id : ids) {
-            if (id != null && cachedActors.containsKey(id)) {
-                queueAsync(() -> cachedActors.get(id).removeViewer(player));
+            if (id != null) {
+                final Actor<?> actor = cachedActors.get(id);
+                if (actor != null) {
+                    queue(() -> actor.removeViewer(player));
+                }
             }
         }
     }
@@ -191,8 +202,8 @@ public class ActorManager extends Module {
     @Async.Execute
     public void processActorUpdate(final Actor<?> actor) {
         final Collection<Player> viewers = actor.getViewers();
-        queue(() -> viewers.forEach(player -> sendPacket(player, actor.getPreSpawnPacket())));
-        scheduler.runTaskLaterAsynchronously(plugin, () -> queue(() -> viewers.forEach(player -> sendPacket(player, actor.getHidePacket()))), 5L);
+        queue(() -> viewers.forEach(player -> sendPacket(player, actor.getPreSpawnPacket(manager))));
+        queueLater(() -> viewers.forEach(player -> sendPacket(player, actor.getHidePacket(manager))), 5L);
     }
 
     private void sendPacket(final Player receiver, final PacketContainer packet) {
@@ -234,7 +245,7 @@ public class ActorManager extends Module {
     public void hideActor(final Actor<?> actor, final Player player) {
         queueAsync(() -> {
             try {
-                manager.sendServerPacket(player, actor.getRemovePacket());
+                manager.sendServerPacket(player, actor.getRemovePacket(manager));
             } catch (final InvocationTargetException e) {
                 I.log(Level.SEVERE, "Encountered issue sending server packet to player!", e);
             }
@@ -258,12 +269,12 @@ public class ActorManager extends Module {
     /**
      * Queue an actor related task on an asynchronous runnable. This is run on the same thread that called it.
      *
-     * @param runnable The runnable
+     * @param result The expected result
      */
     @Sync.AsyncOnly
     public <T> FutureTask<T> queue(final T result, final Runnable runnable) {
         final FutureTask<T> future = new FutureTask<>(runnable, result);
-        this.runner.tasks.add(future);
+        this.runner.queue(future);
         return future;
     }
 
@@ -279,26 +290,48 @@ public class ActorManager extends Module {
         return queue(true, runnable);
     }
 
-    @Override
-    public void cancel() {
-        cachedActors.values().forEach(actor -> {
-            actor.getEntity().remove();
-        });
-        runner.cancel();
+    /**
+     * Queue a runnable to be added later the asynchronous runner.
+     *
+     * @param runnable The runnable
+     * @param delay    The delay in ticks
+     * @return The future task
+     */
+    @Sync.AsyncOnly
+    public FutureTask<?> queueLater(final Runnable runnable, final long delay) {
+        final FutureTask<?> future = new FutureTask<>(runnable, true);
+        delayedRunner.queue(new DelayedFutureTask(future, (task) -> this.runner.queue(future), delay * 1000 / 20));
+        return future;
     }
 
-    private static class ActorTaskRunner extends BukkitRunnable {
-        private final Queue<FutureTask<?>> tasks;
+    private static class DelayedFutureTask implements Delayed, Runnable {
+        private final long readyTime;
 
-        public ActorTaskRunner() {
-            tasks = new ConcurrentLinkedQueue<>();
+        private final FutureTask<?> task;
+        private final Consumer<FutureTask<?>> consumer;
+
+        public DelayedFutureTask(final FutureTask<?> task, final Consumer<FutureTask<?>> consumer, final long delay) {
+            this.task = task;
+            this.consumer = consumer;
+            this.readyTime = System.currentTimeMillis() + delay;
         }
 
         @Override
         public void run() {
-            while (!tasks.isEmpty()) {
-                tasks.poll().run();
+            consumer.accept(task);
+        }
+
+        @Override
+        public long getDelay(@NotNull final TimeUnit unit) {
+            return unit.convert(this.readyTime - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int compareTo(@NotNull final Delayed other) {
+            if (other instanceof DelayedFutureTask that) {
+                return (int) (this.readyTime - that.readyTime);
             }
+            throw new IllegalArgumentException("Cannot compare DelayedEvent to generic Delayed object!");
         }
     }
 }

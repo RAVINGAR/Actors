@@ -1,7 +1,10 @@
 package com.ravingarinc.actor.api.util;
 
+import com.ravingarinc.actor.api.async.Sync;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.Nullable;
 
 import javax.annotation.concurrent.ThreadSafe;
 import javax.vecmath.Vector3d;
@@ -14,26 +17,30 @@ public class Vector3 extends Vector3d {
     private final float yaw;
     private final float pitch;
 
+    private final World world;
+
+    @Sync.SyncOnly
     public Vector3(final Location location) {
-        this(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+        this(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch(), location.getWorld());
     }
 
     public Vector3(final Vector vector) {
-        this(vector.getX(), vector.getY(), vector.getZ(), 0, 0);
+        this(vector.getX(), vector.getY(), vector.getZ(), 0, 0, null);
     }
 
     public Vector3() {
-        this(0, 0, 0, 0, 0);
+        this(0, 0, 0, 0, 0, null);
     }
 
     public Vector3(final double x, final double y, final double z) {
-        this(x, y, z, 0f, 0f);
+        this(x, y, z, 0f, 0f, null);
     }
 
-    public Vector3(final double x, final double y, final double z, final float yaw, final float pitch) {
+    public Vector3(final double x, final double y, final double z, final float yaw, final float pitch, @Nullable final World world) {
         super(x, y, z);
         this.yaw = yaw;
         this.pitch = pitch;
+        this.world = world;
     }
 
     /**
@@ -77,7 +84,11 @@ public class Vector3 extends Vector3d {
      * @return vector
      */
     public Vector toBukkitVector() {
-        return new Vector(this.getX(), this.getY(), this.getZ());
+        return new Vector(x, y, z);
+    }
+
+    public Location toBukkitLocation() {
+        return new Location(world, x, y, z, yaw, pitch);
     }
 
     @Override

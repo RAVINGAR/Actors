@@ -13,10 +13,10 @@ public final class Sync {
 
     /**
      * Indicates that the marked method should only ever be called from an asynchronous context. Most likely as it deals
-     * with objects that are accessed by other asynchronous threads
+     * with objects that are accessed by other asynchronous threads.
      */
     @Retention(RetentionPolicy.CLASS)
-    @Target({ElementType.METHOD, ElementType.CONSTRUCTOR})
+    @Target({ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
     public @interface AsyncOnly {
     }
 

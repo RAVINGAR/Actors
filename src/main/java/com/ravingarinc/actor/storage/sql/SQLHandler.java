@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.file.sql;
+package com.ravingarinc.actor.storage.sql;
 
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;

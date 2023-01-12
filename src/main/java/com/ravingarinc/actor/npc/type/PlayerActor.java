@@ -8,7 +8,6 @@ import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.ravingarinc.actor.api.util.Vector3;
-import org.bukkit.Location;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.List;
@@ -21,19 +20,19 @@ public class PlayerActor extends Actor<LivingEntity> {
     private PlayerInfoData data = null;
 
 
-    public PlayerActor(final UUID uuid, final LivingEntity entity, final Location spawnLocation, final ProtocolManager manager) {
-        super(uuid, entity, spawnLocation, manager);
+    public PlayerActor(final UUID uuid, final LivingEntity entity, final Vector3 spawnLocation) {
+        super(uuid, entity, spawnLocation);
         this.name = "Actor";
         this.gameProfile = new WrappedGameProfile(uuid, name);
     }
 
     @Override
-    public PacketContainer getPreSpawnPacket() {
-        return getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER);
+    public PacketContainer getPreSpawnPacket(final ProtocolManager manager) {
+        return getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager);
     }
 
     @Override
-    public PacketContainer getSpawnPacket(final Vector3 location) {
+    public PacketContainer getSpawnPacket(final Vector3 location, final ProtocolManager manager) {
         final PacketContainer spawnPacket = manager.createPacket(PacketType.Play.Server.NAMED_ENTITY_SPAWN);
         spawnPacket.getIntegers().write(0, id);
         spawnPacket.getUUIDs().write(0, uuid);
@@ -49,8 +48,8 @@ public class PlayerActor extends Actor<LivingEntity> {
     }
 
     @Override
-    public PacketContainer getHidePacket() {
-        return getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER);
+    public PacketContainer getHidePacket(final ProtocolManager manager) {
+        return getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager);
     }
 
     public WrappedGameProfile getWrappedProfile() {
@@ -64,7 +63,7 @@ public class PlayerActor extends Actor<LivingEntity> {
         data = null;
     }
 
-    private PacketContainer getPlayerInfoPacket(final EnumWrappers.PlayerInfoAction action) {
+    private PacketContainer getPlayerInfoPacket(final EnumWrappers.PlayerInfoAction action, final ProtocolManager manager) {
         final PacketContainer infoPacket = manager.createPacket(PacketType.Play.Server.PLAYER_INFO, true);
 
         infoPacket.getPlayerInfoAction().write(0, action);

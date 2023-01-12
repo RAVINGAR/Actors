@@ -4,7 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.ravingarinc.actor.api.util.Vector3;
-import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -28,24 +27,15 @@ public abstract class Actor<T extends Entity> {
      * The entity id which is dependent on the spawn cycle of the actor.
      */
     protected final int id;
-
-    protected final ProtocolManager manager;
     protected final Map<UUID, Player> viewers;
     protected Vector3 spawnLocation;
-    protected Location bukkitLocation;
 
-    public Actor(final UUID uuid, final T entity, final Location spawnLocation, final ProtocolManager manager) {
+    public Actor(final UUID uuid, final T entity, final Vector3 spawnLocation) {
         this.uuid = uuid;
         this.entity = entity;
         this.id = entity.getEntityId();
-        this.manager = manager;
-        this.spawnLocation = new Vector3(spawnLocation);
-        this.bukkitLocation = spawnLocation;
+        this.spawnLocation = spawnLocation;
         this.viewers = new ConcurrentHashMap<>();
-    }
-
-    public Location getBukkitLocation() {
-        return bukkitLocation;
     }
 
     public Vector3 getSpawnLocation() {
@@ -81,18 +71,18 @@ public abstract class Actor<T extends Entity> {
         return new HashSet<>(viewers.values());
     }
 
-    public abstract PacketContainer getPreSpawnPacket();
+    public abstract PacketContainer getPreSpawnPacket(ProtocolManager manager);
 
-    public abstract PacketContainer getSpawnPacket(Vector3 location);
+    public abstract PacketContainer getSpawnPacket(Vector3 location, ProtocolManager manager);
 
-    public abstract PacketContainer getHidePacket();
+    public abstract PacketContainer getHidePacket(ProtocolManager manager);
 
     public void updateName(final String displayName) {
         this.entity.setCustomName(displayName);
         this.entity.setCustomNameVisible(true);
     }
 
-    public PacketContainer getRemovePacket() {
+    public PacketContainer getRemovePacket(final ProtocolManager manager) {
         final PacketContainer container = manager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
         final List<Integer> list = new ArrayList<>();
         list.add(id);

@@ -13,6 +13,7 @@ import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.HashSet;
 import java.util.List;
@@ -20,11 +21,13 @@ import java.util.Set;
 
 public class ActorPacketInterceptor extends Module {
     private final Set<PacketType> spawnPackets;
+    private final BukkitScheduler scheduler;
     private ActorManager actorManager;
     private ProtocolManager protocolManager;
 
     public ActorPacketInterceptor(final RavinPlugin plugin) {
         super(ActorPacketInterceptor.class, plugin, ActorManager.class);
+        scheduler = plugin.getServer().getScheduler();
         spawnPackets = new HashSet<>();
         spawnPackets.add(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
         spawnPackets.add(PacketType.Play.Server.SPAWN_ENTITY);
@@ -47,7 +50,8 @@ public class ActorPacketInterceptor extends Module {
                 }
                 event.setCancelled(true);
                 final StructureModifier<Double> doubles = container.getDoubles();
-                actorManager.processActorSpawn(actor, event.getPlayer(), new Vector3(doubles.read(0), doubles.read(1), doubles.read(2)));
+                final Vector3 location = new Vector3(doubles.read(0), doubles.read(1), doubles.read(2));
+                scheduler.runTaskAsynchronously(plugin, () -> actorManager.processActorSpawn(actor, event.getPlayer(), location));
             }
         });
 
@@ -60,7 +64,7 @@ public class ActorPacketInterceptor extends Module {
                     if (list == null) {
                         return;
                     }
-                    actorManager.processOnActorDestroy(event.getPlayer(), list);
+                    scheduler.runTaskAsynchronously(plugin, () -> actorManager.processOnActorDestroy(event.getPlayer(), list));
                     // Todo when we have events for MANUALLY showing and hiding an actor, this must be different to listening for
                     //   these events.
                 }

@@ -1,10 +1,10 @@
 package com.ravingarinc.actor;
 
 import com.ravingarinc.actor.command.ActorsCommand;
-import com.ravingarinc.actor.file.ConfigManager;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.ActorPacketInterceptor;
 import com.ravingarinc.actor.npc.skin.SkinClient;
+import com.ravingarinc.actor.storage.ConfigManager;
 
 public final class Actors extends RavinPlugin {
     @Override

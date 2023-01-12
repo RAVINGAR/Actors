@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.file;
+package com.ravingarinc.actor.storage;
 
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
