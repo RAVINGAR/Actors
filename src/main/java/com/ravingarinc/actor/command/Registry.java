@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 /**
@@ -33,12 +33,12 @@ public class Registry {
         return map;
     }
 
-    public static void registerArgument(final String group, final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiConsumer<Object, String[]> consumer) {
+    public static void registerArgument(final String group, final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiFunction<Object, String[], String> consumer) {
         final Map<String, Argument> map = argumentTypes.computeIfAbsent(group, (g) -> new HashMap<>());
-        map.put("prefix", new Argument(prefix, minArgs, tabCompletions, consumer, null));
+        map.put(prefix, new Argument(prefix, minArgs, tabCompletions, consumer, null));
     }
 
-    public static void registerArgument(final String group, final String prefix, final int minArgs, final BiConsumer<Object, String[]> consumer) {
+    public static void registerArgument(final String group, final String prefix, final int minArgs, final BiFunction<Object, String[], String> consumer) {
         Registry.registerArgument(group, prefix, minArgs, null, consumer);
     }
 

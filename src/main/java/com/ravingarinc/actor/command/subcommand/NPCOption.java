@@ -2,31 +2,41 @@ package com.ravingarinc.actor.command.subcommand;
 
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
-import com.ravingarinc.actor.npc.skin.ActorSkin;
-import com.ravingarinc.actor.npc.skin.SkinClient;
+import com.ravingarinc.actor.npc.ActorSelector;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import com.ravingarinc.actor.skin.ActorSkin;
+import com.ravingarinc.actor.skin.SkinClient;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class NPCOption extends CommandOption {
     private final ActorManager manager;
 
     private final SkinClient client;
 
+    private final ActorSelector selector;
+
     public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
         super(parent, 2, (sender, args) -> false);
         this.manager = plugin.getModule(ActorManager.class);
         this.client = plugin.getModule(SkinClient.class);
+        this.selector = plugin.getModule(ActorSelector.class);
         registerArguments();
         registerOptions();
     }
@@ -35,16 +45,25 @@ public class NPCOption extends CommandOption {
         Registry.registerArgument(Registry.ACTOR_ARGS, "--name", 1, (object, args) -> {
             if (object instanceof Actor<?> actor) {
                 actor.updateName(args[0]);
+                return args[0];
             }
+            return null;
         });
-        Registry.registerArgument(Registry.ACTOR_ARGS, "--skin", 1, () -> client.getSkins().stream().toList(), (object, args) -> {
+        Registry.registerArgument(Registry.ACTOR_ARGS, "--skin", 1, () -> client.getSkinNames().stream().toList(), (object, args) -> {
             if (object instanceof PlayerActor playerActor) {
-                // todo make this --skin actually parse as a uuid when saved to the actor for the database!
-                final ActorSkin skin = client.getSkin(args[0]);
+                final String argument = args[0];
+                ActorSkin skin;
+                try {
+                    skin = client.getSkin(UUID.fromString(argument));
+                } catch (final IllegalArgumentException ignored) {
+                    skin = client.getSkin(argument);
+                }
                 if (skin != null) {
                     skin.linkActor(playerActor);
+                    return skin.getUUID().toString();
                 }
             }
+            return null;
         });
     }
 
@@ -60,7 +79,7 @@ public class NPCOption extends CommandOption {
                     final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 3, args);
                     final Vector3 location = new Vector3(player.getLocation());
                     AsyncHandler.runAsynchronously(() -> manager.createActor(argType, location, arguments));
-                    sender.sendMessage(ChatColor.GREEN + "Created a new NPC with the given arguments!");
+                    sender.sendMessage(ChatColor.DARK_AQUA + "Created a new NPC with the given arguments!");
                 } catch (final Argument.InvalidArgumentException exception) {
                     sender.sendMessage(ChatColor.RED + exception.getMessage());
                 }
@@ -87,10 +106,76 @@ public class NPCOption extends CommandOption {
             }
         });
 
-        addOption("update", 3, (sender, args) -> {
-            // todo handle things then the last thing you do is call
+        addOption("selector", 2, (sender, args) -> {
+            if (sender instanceof Player player) {
+                if (selector.toggleSelecting(player)) {
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - ON>" + ChatColor.AQUA + "You can now LEFT-CLICK any Actors to select them!");
+                } else {
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - OFF>" + ChatColor.RED + "Selection on LEFT-CLICK is now disabled.");
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "This command can only be used by a player!");
+            }
+            return true;
+        }).addOption("on", 3, (sender, args) -> {
+            if (sender instanceof Player player) {
+                if (selector.isSelecting(player)) {
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - ON>" + ChatColor.AQUA + "Actor Selector is already enabled!");
+                } else {
+                    selector.toggleSelecting(player);
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - ON>" + ChatColor.AQUA + "You can now LEFT-CLICK any Actors to select them!");
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "This command can only be used by a player!");
+            }
+            return true;
+        }).getParent().addOption("off", 3, (sender, args) -> {
+            if (sender instanceof Player player) {
+                if (selector.isSelecting(player)) {
+                    selector.toggleSelecting(player);
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - OFF>" + ChatColor.RED + "Selection on LEFT-CLICK is now disabled.");
+                } else {
+                    sender.sendMessage(ChatColor.DARK_AQUA + "<Selector - OFF>" + ChatColor.RED + "Actor Selector is already disabled!");
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "This command can only be used by a player!");
+            }
+            return true;
+        });
 
-            //manager.processActorUpdate(actor);
+        addOption("update", 3, (sender, args) -> {
+            if (sender instanceof Player player) {
+                final Actor<?> actor = selector.getSelection(player);
+                if (actor == null) {
+                    sender.sendMessage(ChatColor.GRAY + "You have no actor selected!");
+                    if (selector.isSelecting(player)) {
+                        ChatUtil.send(player, new ComponentBuilder(ChatColor.GRAY + "Use ")
+                                .append("/actor selector on")
+                                .event(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/actor selector on"))
+                                .event(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text(ChatColor.DARK_GRAY + "<click to autofill command>")))
+                                .append(" and then left-click an actor to select it!")
+                                .event((ClickEvent) null)
+                                .event((HoverEvent) null)
+                                .create());
+                    }
+                } else {
+                    try {
+                        final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 2, args);
+                        for (final Argument arg : arguments) {
+                            actor.applyArgument(arg);
+                        }
+                        manager.processActorUpdate(actor);
+                        sender.sendMessage(ChatColor.DARK_AQUA + "Successfully applied update! The actor now has the following arguments;");
+                        actor.getAppliedArguments().forEach(arg -> {
+                            sender.sendMessage(ChatColor.GRAY + arg);
+                        });
+                    } catch (final Argument.InvalidArgumentException e) {
+                        sender.sendMessage(ChatColor.RED + e.getMessage());
+                    }
+                }
+            } else {
+                sender.sendMessage(ChatColor.RED + "This command can only be used by a player!");
+            }
             return true;
         });
     }

@@ -3,7 +3,7 @@ package com.ravingarinc.actor.command;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class Argument {
@@ -12,7 +12,7 @@ public class Argument {
     private final String[] args;
 
     private final Supplier<List<String>> tabCompletions;
-    private final BiConsumer<Object, String[]> consumer;
+    private final BiFunction<Object, String[], String> consumer;
 
     /**
      * An argument for a command. This will transform a given type of object based on the command.
@@ -23,7 +23,7 @@ public class Argument {
      * @param args     Can be null, however if not null it is expected this contains all arguments after the preceding
      *                 --arg (as specified by prefix) but up to the next --arg
      */
-    public Argument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiConsumer<Object, String[]> consumer, final String[] args) {
+    public Argument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiFunction<Object, String[], String> consumer, final String[] args) {
         this.prefix = prefix;
         this.minArgs = minArgs;
         this.consumer = consumer;
@@ -36,12 +36,14 @@ public class Argument {
      * This should only ever be called by the actor through {@link com.ravingarinc.actor.npc.type.Actor#applyArgument(Argument)}
      *
      * @param value The value
+     * @return The final applied argument string for storing in a database with the prefix already appended.
      */
-    public void consume(final Object value) {
+    @Nullable
+    public String consume(final Object value) {
         if (args == null) {
             throw new IllegalArgumentException("Cannot consume arguments as this Argument object does not have any args!");
         }
-        consumer.accept(value, args);
+        return consumer.apply(value, args);
     }
 
     public String getPrefix() {

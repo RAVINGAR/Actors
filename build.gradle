@@ -178,8 +178,9 @@ bukkit {
 
     commands {
         actors {
+            aliases = ["a", "actors"]
             description = 'Actor Admin Command'
-            usage = '/actors'
+            usage = 'Unknown argument. Try /actor ?'
             permission = 'actors.admin'
         }
         testcommand {

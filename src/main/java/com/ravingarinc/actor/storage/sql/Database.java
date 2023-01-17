@@ -60,9 +60,9 @@ public abstract class Database extends Module {
             } catch (final SQLException exception) {
                 throw new ModuleLoadException(this, exception);
             }
-            if (!execute(createTable)) {
-                throw new ModuleLoadException(this, ModuleLoadException.Reason.SQL);
-            }
+        }
+        if (!execute(createTable)) {
+            throw new ModuleLoadException(this, ModuleLoadException.Reason.SQL);
         }
         databaseRunner = new BlockingRunner<>(new LinkedBlockingQueue<>());
         databaseRunner.runTaskAsynchronously(plugin);

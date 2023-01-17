@@ -6,7 +6,35 @@ public class SQLSchema {
     public static class Skins {
         public static final String SKINS = "skins";
 
-        public static final String createTable = "todo";
+        public static final String UUID = "uuid";
+        public static final String NAME = "name";
+        public static final String VALUE = "value";
+        public static final String SIGNATURE = "signature";
+
+        public static final String createTable = "CREATE TABLE IF NOT EXISTS " + SKINS + "(" +
+                UUID + " TEXT PRIMARY KEY," +
+                NAME + " TEXT NOT NULL," +
+                VALUE + " TEXT NOT NULL," +
+                SIGNATURE + " TEXT NOT NULL) WITHOUT ROWID;";
+
+        public static final String selectAll = "SELECT * FROM " + SKINS;
+
+        public static final String select = "SELECT " + NAME + ", " + VALUE + ", " + SIGNATURE +
+                " FROM " + SKINS +
+                " WHERE " + UUID + " = ?";
+
+        public static final String insert = "INSERT INTO " + SKINS + "(" +
+                UUID + "," +
+                NAME + "," +
+                VALUE + "," +
+                SIGNATURE + ") VALUES(?,?,?,?)";
+
+        public static final String update = "UPDATE " + SKINS + " SET " +
+                NAME + " = ? , " +
+                VALUE + " = ? , " +
+                SIGNATURE + " = ? " +
+                "WHERE " + UUID + " = ?";
+
     }
 
     public static class Actors {
@@ -27,7 +55,7 @@ public class SQLSchema {
                 Z + " REAL NOT NULL," +
                 WORLD + " TEXT NOT NULL," +
                 ARGUMENTS + " TEXT NOT NULL) WITHOUT ROWID;";
-        public static final String select = "SELECT *" +
+        public static final String select = "SELECT " + TYPE + ", " + X + ", " + Y + ", " + Z + ", " + WORLD + ", " + ARGUMENTS +
                 " FROM " + ACTORS +
                 " WHERE " + Actors.UUID + " = ?";
 

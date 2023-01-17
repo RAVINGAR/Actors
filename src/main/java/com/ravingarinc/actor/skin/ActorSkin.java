@@ -1,28 +1,38 @@
-package com.ravingarinc.actor.npc.skin;
+package com.ravingarinc.actor.skin;
 
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.collect.Multimap;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.mineskin.data.Skin;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public class ActorSkin {
-    private final String name;
     private final List<PlayerActor> linkedActors;
-    private UUID uuid;
+    private final UUID uuid;
+    private String name;
     private String value;
     private String signature;
-    private String url;
 
-    public ActorSkin(final String name) {
+    public ActorSkin(@NotNull final String name, @NotNull final UUID uuid, @Nullable final String value, @Nullable final String signature) {
         this.name = name;
+        this.uuid = uuid;
+        this.value = value;
+        this.signature = signature;
         this.linkedActors = new LinkedList<>();
+    }
+
+    @NotNull
+    public UUID getUUID() {
+        return uuid;
     }
 
     @Sync.AsyncOnly
@@ -30,10 +40,41 @@ public class ActorSkin {
         if (skin == null) {
             throw new IllegalArgumentException("Skin was null!");
         }
-        this.uuid = skin.data.uuid;
         this.value = skin.data.texture.value;
         this.signature = skin.data.texture.signature;
-        this.url = skin.data.texture.url;
+    }
+
+    @Nullable
+    public String getSignature() {
+        return signature;
+    }
+
+    @Nullable
+    public String getValue() {
+        return value;
+    }
+
+    /**
+     * Updates an internal value and returns true if the value was changed, or null if it was not.
+     */
+    public boolean updateTexture(final String value, final String signature) {
+        if ((value == null || value.equalsIgnoreCase(this.value)) && (signature == null || signature.equalsIgnoreCase(this.signature))) {
+            return false;
+        }
+        this.value = value;
+        this.signature = signature;
+        return true;
+    }
+
+    /**
+     * Updates an internal value and returns true if the value was changed, or null if it was not.
+     */
+    public boolean updateName(final String name) {
+        if (name == null || name.equalsIgnoreCase(this.name)) {
+            return false;
+        }
+        this.name = name;
+        return true;
     }
 
     @Sync.AsyncOnly
@@ -93,12 +134,12 @@ public class ActorSkin {
             return false;
         }
         final ActorSkin actorSkin = (ActorSkin) o;
-        return uuid.equals(actorSkin.uuid);
+        return name.equals(actorSkin.name) && Objects.equals(uuid, actorSkin.uuid);
     }
 
     @Override
     public int hashCode() {
-        return uuid.hashCode();
+        return Objects.hash(name, uuid);
     }
 
     public String getName() {

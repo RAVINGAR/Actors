@@ -48,6 +48,7 @@ public class ActorDatabase extends Database {
     @Override
     public void cancel() {
         queueFromSync(this::saveAllActors);
+        unloadedActors.clear();
         // this will need to block until the queries are complete
         super.cancel();
     }
@@ -62,11 +63,11 @@ public class ActorDatabase extends Database {
             } catch (final SQLException | AsynchronousException e) {
                 I.log(Level.SEVERE, "Encountered issue querying database!", e);
             }
+            if (unloadedActors.size() > 0) {
+                I.log(Level.WARNING, "Some actors could not be loaded. If you have recently changed world name and wish to migrate these unloaded actors, please type /actors migrate world %s <new-world-name> and then reload the plugin!");
+            }
             return null;
         });
-        if (unloadedActors.size() > 0) {
-            I.log(Level.WARNING, "If you have recently changed world name and wish to migrate these unloaded actors, please type /actors migrate world %s <new-world-name> and then reload the plugin!");
-        }
     }
 
     @Sync.AsyncOnly
@@ -119,7 +120,7 @@ public class ActorDatabase extends Database {
     private void saveActor(final Actor<?> actor) {
         final Boolean exists = query(Actors.select, (statement) -> {
             try {
-                statement.setString(1, actor.toString());
+                statement.setString(1, actor.getUUID().toString());
             } catch (final SQLException exception) {
                 I.log(Level.SEVERE, "Encountered issue preparing statement!", exception);
             }

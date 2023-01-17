@@ -3,9 +3,10 @@ package com.ravingarinc.actor;
 import com.ravingarinc.actor.command.ActorsCommand;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.ActorPacketInterceptor;
-import com.ravingarinc.actor.npc.skin.SkinClient;
+import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.ConfigManager;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
+import com.ravingarinc.actor.storage.sql.SkinDatabase;
 
 public final class Actors extends RavinPlugin {
     @Override
@@ -18,6 +19,7 @@ public final class Actors extends RavinPlugin {
         addModule(ActorPacketInterceptor.class);
 
         //load databases
+        addModule(SkinDatabase.class);
         addModule(ActorDatabase.class);
         //addModule(SQLHandler.class); // comment out if not needed
         // add listeners

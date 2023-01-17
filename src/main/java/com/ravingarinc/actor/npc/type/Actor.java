@@ -51,8 +51,10 @@ public abstract class Actor<T extends Entity> {
     }
 
     public void applyArgument(final Argument argument) {
-        argument.consume(this);
-        appliedArguments.put(argument.getPrefix(), argument.toString());
+        final String arg = argument.consume(this);
+        if (arg != null) {
+            appliedArguments.put(argument.getPrefix(), arg);
+        }
     }
 
     public List<String> getAppliedArguments() {

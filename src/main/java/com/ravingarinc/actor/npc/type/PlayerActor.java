@@ -8,6 +8,7 @@ import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.npc.ActorFactory;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public class PlayerActor extends Actor<LivingEntity> {
 
 
     public PlayerActor(final UUID uuid, final LivingEntity entity, final Vector3 spawnLocation) {
-        super(uuid, entity, spawnLocation);
+        super(ActorFactory.PLAYER, uuid, entity, spawnLocation);
         this.name = "Actor";
         this.gameProfile = new WrappedGameProfile(uuid, name);
     }

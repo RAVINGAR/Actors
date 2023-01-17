@@ -19,21 +19,22 @@ public class BlockingRunner<T extends Runnable> extends BukkitRunnable {
         this.queue.add(task);
     }
 
-    public Collection<Runnable> getRemaining() {
+    public Collection<T> getRemaining() {
         return new HashSet<>(this.queue);
+    }
+
+    public void queueAll(final Collection<? extends T> collection) {
+        this.queue.addAll(collection);
     }
 
     @Override
     public void run() {
-        if (!isCancelled()) {
+        while (!isCancelled()) {
             try {
                 queue.take().run();
             } catch (final InterruptedException e) {
                 I.log(Level.SEVERE, "BlockingRunner's queue run() was interrupted!", e);
             }
-            run();
-        } else {
-            I.log(Level.WARNING, "DEBUG -> BlockingRunner was cancelled but still runs run()!");
         }
     }
 }

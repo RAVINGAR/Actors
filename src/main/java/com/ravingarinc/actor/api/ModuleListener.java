@@ -7,7 +7,7 @@ import org.bukkit.event.Listener;
 public class ModuleListener extends Module implements Listener {
 
     @SafeVarargs
-    protected ModuleListener(final Class<? extends Module> identifier, final RavinPlugin plugin, final Class<? extends Module>... dependsOn) {
+    public ModuleListener(final Class<? extends Module> identifier, final RavinPlugin plugin, final Class<? extends Module>... dependsOn) {
         super(identifier, plugin, dependsOn);
     }
 
@@ -17,7 +17,7 @@ public class ModuleListener extends Module implements Listener {
     }
 
     @Override
-    protected void load() throws ModuleLoadException {
+    public void load() throws ModuleLoadException {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 }

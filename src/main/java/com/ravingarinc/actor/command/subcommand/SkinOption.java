@@ -2,7 +2,7 @@ package com.ravingarinc.actor.command.subcommand;
 
 import com.ravingarinc.actor.command.ChatComponents;
 import com.ravingarinc.actor.command.CommandOption;
-import com.ravingarinc.actor.npc.skin.SkinClient;
+import com.ravingarinc.actor.skin.SkinClient;
 import org.bukkit.ChatColor;
 
 import java.io.File;
@@ -85,7 +85,7 @@ public class SkinOption extends CommandOption {
             if (args.length == 3) {
                 return client.getValidFileNames();
             } else if (args.length == 4) {
-                return client.getSkins().stream().toList();
+                return client.getSkinNames().stream().toList();
             } else {
                 return new ArrayList<>();
             }
@@ -104,7 +104,7 @@ public class SkinOption extends CommandOption {
         addOption("list", 2, (sender, args) -> {
             sender.sendMessage(ChatComponents.TITLE);
             sender.sendMessage(ChatColor.DARK_GRAY + "Currently Loaded -->");
-            client.getSkins().forEach(skin -> sender.sendMessage(ChatColor.GRAY + "- " + skin));
+            client.getSkinNames().forEach(skin -> sender.sendMessage(ChatColor.GRAY + "- " + skin));
             return true;
         }).buildTabCompletions((sender, args) -> new ArrayList<>());
     }

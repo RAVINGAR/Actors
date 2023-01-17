@@ -1,9 +1,11 @@
-package com.ravingarinc.actor.npc.skin;
+package com.ravingarinc.actor.skin;
 
 import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.BiMap;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.BlockingRunner;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
@@ -11,9 +13,8 @@ import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.storage.ConfigManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.Async;
-import org.jetbrains.annotations.Blocking;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.mineskin.MineskinClient;
 import org.mineskin.SkinOptions;
@@ -24,15 +25,15 @@ import org.mineskin.data.Skin;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -41,7 +42,7 @@ public class SkinClient extends Module {
     private final MineskinClient skinClient;
     private final File skinFolder;
 
-    private final Map<String, ActorSkin> cachedSkins;
+    private final BiMap<String, UUID, ActorSkin> cachedSkins;
 
     private final List<String> validExtensions;
 
@@ -49,7 +50,7 @@ public class SkinClient extends Module {
 
     private long lastFileRead = 0;
 
-    private SkinRunner runner = null;
+    private BlockingRunner<Runnable> runner = null;
 
     private ActorManager actorManager;
 
@@ -58,7 +59,7 @@ public class SkinClient extends Module {
         super(SkinClient.class, plugin, ConfigManager.class, ActorManager.class);
         this.skinClient = new MineskinClient("Actors", "d643ce8090a196feb834e39b410ae17b87ac7a2c514bd328e0f90fce61aa3461");
         this.skinFolder = new File(plugin.getDataFolder() + "/skins");
-        this.cachedSkins = new ConcurrentHashMap<>();
+        this.cachedSkins = new BiMap<>(String.class, UUID.class);
         this.validFiles = new ArrayList<>();
         this.validExtensions = new ArrayList<>();
         validExtensions.add(".png");
@@ -105,16 +106,24 @@ public class SkinClient extends Module {
         if (!skinFolder.exists()) {
             skinFolder.mkdir();
         }
-        final SkinRunner newRunner = new SkinRunner();
+        final BlockingRunner<Runnable> newRunner = new BlockingRunner<>(new LinkedBlockingQueue<>());
         if (runner != null) {
-            newRunner.queue.addAll(runner.getRemaining());
+            newRunner.queueAll(runner.getRemaining());
         }
         runner = newRunner;
-        runner.runTaskTimerAsynchronously(plugin, 0, 5);
+        runner.runTaskAsynchronously(plugin);
     }
 
+    @SuppressWarnings("all")
+    @Nullable
     public ActorSkin getSkin(final String name) {
         return cachedSkins.get(name);
+    }
+
+    @SuppressWarnings("all")
+    @Nullable
+    public ActorSkin getSkin(final UUID uuid) {
+        return cachedSkins.get(uuid);
     }
 
     /**
@@ -131,26 +140,84 @@ public class SkinClient extends Module {
      * Upload a new skin, to either a new ActorSkin or applying it to an already existing ActorSkin object. This queues
      * the task on an asynchronous thread.
      *
-     * @param sender
-     * @param file
-     * @param name   Name of the skin. Generally, this must be unique!
+     * @param sender The sender
+     * @param file   The file
+     * @param name   Name of the skin.
      * @throws FileNotFoundException Thrown if file does not exist!
      */
     @Async.Schedule
     public void uploadSkin(final CommandSender sender, final File file, final String name) throws FileNotFoundException {
         final CompletableFuture<Skin> skinFuture = skinClient.generateUpload(file, SkinOptions.create(name, Variant.AUTO, Visibility.PUBLIC));
         AsyncHandler.runAsynchronously(() -> {
-            final ActorSkin skin = cachedSkins.computeIfAbsent(name, ActorSkin::new);
-            runner.queue(skin, skinFuture, sender);
+            final ActorSkin skin = getOrCreate(name);
+            queue(skin, skinFuture, sender);
         });
     }
 
     public void saveSkin(final CommandSender sender, final String url, final String name) {
         final CompletableFuture<Skin> skinFuture = skinClient.generateUrl(url);
         AsyncHandler.runAsynchronously(() -> {
-            final ActorSkin skin = cachedSkins.computeIfAbsent(name, ActorSkin::new);
-            runner.queue(skin, skinFuture, sender);
+            final ActorSkin skin = getOrCreate(name);
+            queue(skin, skinFuture, sender);
         });
+    }
+
+    /**
+     * Attempts to get a skin from the existing skin cache otherwise
+     *
+     * @param name
+     * @return
+     */
+    public ActorSkin getOrCreate(final String name) {
+        ActorSkin skin = getSkin(name);
+        if (skin == null) {
+            skin = createSkin(name, UUID.randomUUID(), null, null);
+        }
+        return skin;
+    }
+
+    /**
+     * Creates a new skin with the given values and then adds it to the skin cache.
+     * When calling this method, it is assumed that a skin does NOT already exist at the given name or UUID
+     *
+     * @param name      The name
+     * @param uuid      The uuid
+     * @param value     The value
+     * @param signature The signature
+     * @return The new skin
+     */
+    public ActorSkin createSkin(@NotNull final String name, @NotNull final UUID uuid, @Nullable final String value, @Nullable final String signature) {
+        final ActorSkin skin = new ActorSkin(name, uuid, value, signature);
+        cachedSkins.put(name, uuid, skin);
+        return skin;
+    }
+
+    @Sync.AsyncOnly
+    public void updateSkin(@NotNull final String name, @Nullable final UUID uuid, @Nullable final String value, @Nullable final String signature) {
+        ActorSkin skin = getSkin(name);
+        if (skin == null && uuid != null) {
+            skin = getSkin(uuid);
+        }
+        if (skin == null) {
+            throw new IllegalArgumentException("Could not find skin with name '" + name + "' nor with UUID '" + uuid + "'!");
+        }
+
+    }
+
+    public void updateSkin(@NotNull final ActorSkin skin, @Nullable final String name, @Nullable final String value, @Nullable final String signature) {
+        if (skin.updateName(name)) {
+            cachedSkins.removeBoth(name, skin.getUUID());
+            cachedSkins.put(name, skin.getUUID(), skin);
+        }
+        // It is assumed that value and signature are always updated together
+        if (skin.updateTexture(value, signature)) {
+            skin.apply(actorManager);
+        }
+    }
+
+    @Sync.AsyncOnly
+    public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
+        this.runner.queue(new SkinUploadRequest(skin, future, sender));
     }
 
 
@@ -159,8 +226,12 @@ public class SkinClient extends Module {
      *
      * @return The list of skins.
      */
-    public Set<String> getSkins() {
-        return cachedSkins.keySet();
+    public Set<String> getSkinNames() {
+        return new HashSet<>(cachedSkins.firstKeys());
+    }
+
+    public Collection<ActorSkin> getSkins() {
+        return Collections.unmodifiableCollection(cachedSkins.values());
     }
 
     @Override
@@ -168,31 +239,7 @@ public class SkinClient extends Module {
         runner.cancel();
     }
 
-    private class SkinRunner extends BukkitRunnable {
-        private final Queue<SkinUploadRequest> queue;
-
-        public SkinRunner() {
-            this.queue = new ConcurrentLinkedQueue<>();
-        }
-
-        @Sync.AsyncOnly
-        public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
-            this.queue.add(new SkinUploadRequest(skin, future, sender));
-        }
-
-        public List<SkinUploadRequest> getRemaining() {
-            return queue.stream().toList();
-        }
-
-        @Override
-        public void run() {
-            while (!queue.isEmpty()) {
-                queue.poll().waitForResult();
-            }
-        }
-    }
-
-    private class SkinUploadRequest {
+    private class SkinUploadRequest implements Runnable {
         private final ActorSkin actorSkin;
         private final CompletableFuture<Skin> future;
         private final CommandSender sender;
@@ -203,11 +250,13 @@ public class SkinClient extends Module {
             this.sender = sender;
         }
 
-        @Blocking
-        public void waitForResult() {
+        @Override
+        public void run() {
             try {
                 actorSkin.setValues(future.get(30, TimeUnit.SECONDS));
-                AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + actorSkin.getName() + "'!"));
+                if (sender != null) {
+                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + actorSkin.getName() + "'!"));
+                }
                 actorSkin.apply(actorManager);
                 return;
             } catch (final InterruptedException e) {

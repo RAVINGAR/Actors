@@ -4,6 +4,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.BiMap;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
@@ -12,10 +13,10 @@ import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
-import com.ravingarinc.actor.npc.skin.ActorSkin;
-import com.ravingarinc.actor.npc.skin.SkinClient;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import com.ravingarinc.actor.skin.ActorSkin;
+import com.ravingarinc.actor.skin.SkinClient;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.NotNull;
@@ -23,11 +24,9 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
@@ -44,7 +43,7 @@ import java.util.logging.Level;
  */
 public class ActorManager extends Module {
 
-    private final Map<Integer, Actor<?>> cachedActors;
+    private final BiMap<Integer, UUID, Actor<?>> cachedActors;
     private BlockingRunner<FutureTask<?>> runner;
     private BlockingRunner<DelayedFutureTask> delayedRunner;
     private SkinClient client;
@@ -60,7 +59,7 @@ public class ActorManager extends Module {
      */
     public ActorManager(final RavinPlugin plugin) {
         super(ActorManager.class, plugin);
-        this.cachedActors = new ConcurrentHashMap<>();
+        this.cachedActors = new BiMap<>(Integer.class, UUID.class);
     }
 
     public static UUID transformToVersion(final UUID uuid, final int version) {
@@ -87,9 +86,8 @@ public class ActorManager extends Module {
         delayedRunner.cancel();
         runner.cancel();
 
-        cachedActors.values().forEach(actor -> {
-            actor.getEntity().remove();
-        });
+        cachedActors.values().forEach(actor -> actor.getEntity().remove());
+        cachedActors.clear();
     }
 
     @Sync.AsyncOnly
@@ -103,19 +101,7 @@ public class ActorManager extends Module {
     }
 
     public Collection<Actor<?>> getActors() {
-        return new HashSet<>(cachedActors.values());
-    }
-
-    /**
-     * Load existing actor from the database.
-     *
-     * @param uuid the existing UUID
-     */
-    public void loadActor(final UUID uuid) {
-
-        // todo load from SQL then do something liek such with the following params
-        //   uuid, type, location and args must be loaded from the SQL database
-        //  createActor(uuid, type, location, args)
+        return Collections.unmodifiableCollection(cachedActors.values());
     }
 
     @Sync.AsyncOnly
@@ -148,7 +134,7 @@ public class ActorManager extends Module {
                     I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
                 }
             });
-            cachedActors.put(actor.getId(), actor);
+            cachedActors.put(actor.getId(), actor.getUUID(), actor);
         }, 5L);
     }
 
@@ -186,7 +172,7 @@ public class ActorManager extends Module {
     public void processOnActorDestroy(final Player player, final List<Integer> ids) {
         for (final Integer id : ids) {
             if (id != null) {
-                final Actor<?> actor = cachedActors.get(id);
+                final Actor<?> actor = getActor(id);
                 if (actor != null) {
                     queue(() -> actor.removeViewer(player));
                 }
@@ -194,10 +180,20 @@ public class ActorManager extends Module {
         }
     }
 
+    @SuppressWarnings("all")
+    public Actor<?> getActor(int id) {
+        return cachedActors.get(id);
+    }
+
+    @SuppressWarnings("all")
+    public Actor<?> getActor(UUID uuid) {
+        return cachedActors.get(uuid);
+    }
+
     /**
      * Called from an asynchronous context
      *
-     * @param actor
+     * @param actor The actor
      */
     @Async.Execute
     public void processActorUpdate(final Actor<?> actor) {
@@ -250,10 +246,6 @@ public class ActorManager extends Module {
                 I.log(Level.SEVERE, "Encountered issue sending server packet to player!", e);
             }
         });
-    }
-
-    public Actor<?> getActor(final int id) {
-        return cachedActors.get(id);
     }
 
     /**
