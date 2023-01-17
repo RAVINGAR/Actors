@@ -11,7 +11,7 @@ public class SQLSchema {
         public static final String VALUE = "value";
         public static final String SIGNATURE = "signature";
 
-        public static final String createTable = "CREATE TABLE IF NOT EXISTS " + SKINS + "(" +
+        public static final String createTable = "CREATE TABLE IF NOT EXISTS " + SKINS + " (" +
                 UUID + " TEXT PRIMARY KEY," +
                 NAME + " TEXT NOT NULL," +
                 VALUE + " TEXT NOT NULL," +

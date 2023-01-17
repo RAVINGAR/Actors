@@ -105,6 +105,7 @@ public abstract class RavinPlugin extends JavaPlugin {
         load();
     }
 
+    @SuppressWarnings("PMD.AvoidCatchingGenericException")
     public void cancel() {
         final List<Module> reverseOrder = new ArrayList<>(modules.values());
         Collections.reverse(reverseOrder);
@@ -112,6 +113,7 @@ public abstract class RavinPlugin extends JavaPlugin {
             if (module.isLoaded()) {
                 try {
                     module.cancel();
+                    module.setLoaded(false);
                 } catch (final Exception e) {
                     log(Level.SEVERE, "Encountered issue shutting down module '%s'!", e, module.getName());
                 }
@@ -135,7 +137,7 @@ public abstract class RavinPlugin extends JavaPlugin {
     public <T extends Module> T getModule(final Class<T> type) {
         final Module module = modules.get(type);
         if (module == null) {
-            throw new IllegalArgumentException("Could not find module of type " + type.getName() + ". Contact developer! Most likely EldenRhym.getManager() has been called from a Module's constructor!");
+            throw new IllegalArgumentException("Could not find module of type " + type.getName() + ". Contact developer! Most likely #.getManager() has been called from a Module's constructor or module was not added!");
         }
         return (T) module;
     }
@@ -145,7 +147,6 @@ public abstract class RavinPlugin extends JavaPlugin {
     public void onDisable() {
         cancel();
         this.getServer().getScheduler().cancelTasks(this);
-
         I.log(Level.INFO, getName() + " is disabled.");
     }
 }

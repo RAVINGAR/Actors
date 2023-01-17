@@ -1,5 +1,7 @@
 package com.ravingarinc.actor.command;
 
+import com.ravingarinc.actor.api.TriFunction;
+import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -7,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 /**
@@ -33,16 +34,16 @@ public class Registry {
         return map;
     }
 
-    public static void registerArgument(final String group, final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiFunction<Object, String[], String> consumer) {
+    public static void registerArgument(final String group, final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final TriFunction<CommandSender, Object, String[], String> consumer) {
         final Map<String, Argument> map = argumentTypes.computeIfAbsent(group, (g) -> new HashMap<>());
-        map.put(prefix, new Argument(prefix, minArgs, tabCompletions, consumer, null));
+        map.put(prefix, new Argument(null, prefix, minArgs, tabCompletions, consumer, null));
     }
 
-    public static void registerArgument(final String group, final String prefix, final int minArgs, final BiFunction<Object, String[], String> consumer) {
+    public static void registerArgument(final String group, final String prefix, final int minArgs, final TriFunction<CommandSender, Object, String[], String> consumer) {
         Registry.registerArgument(group, prefix, minArgs, null, consumer);
     }
 
-    public static Argument[] parseArguments(final String group, final int index, final String[] args) throws Argument.InvalidArgumentException {
+    public static Argument[] parseArguments(final String group, final int index, final String[] args, final CommandSender sender) throws Argument.InvalidArgumentException {
         final Map<String, Argument> map = argumentTypes.get(group);
         if (map == null) {
             throw new IllegalArgumentException("Unknown argument registry group '" + group + "'!");
@@ -53,7 +54,7 @@ public class Registry {
         for (int i = index; i < args.length; i++) {
             if (args[i].startsWith("--")) {
                 if (lastArg != null) {
-                    arguments.add(lastArg.createArgument(lastStrings.toArray(new String[0])));
+                    arguments.add(lastArg.createArgument(sender, lastStrings.toArray(new String[0])));
                     lastStrings.clear();
                 }
                 lastArg = map.get(args[i]);
@@ -61,7 +62,7 @@ public class Registry {
                 lastStrings.add(args[i]);
             }
             if (i + 1 == args.length && lastArg != null) {
-                arguments.add(lastArg.createArgument(lastStrings.toArray(new String[0])));
+                arguments.add(lastArg.createArgument(sender, lastStrings.toArray(new String[0])));
                 lastStrings.clear();
             }
         }

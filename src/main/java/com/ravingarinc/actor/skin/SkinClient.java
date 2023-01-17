@@ -6,11 +6,12 @@ import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
 import com.ravingarinc.actor.api.async.BlockingRunner;
+import com.ravingarinc.actor.api.async.CompletableRunnable;
 import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.storage.ConfigManager;
+import com.ravingarinc.actor.storage.sql.SkinDatabase;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Async;
@@ -32,11 +33,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.logging.Level;
 
 public class SkinClient extends Module {
     private final MineskinClient skinClient;
@@ -50,9 +47,11 @@ public class SkinClient extends Module {
 
     private long lastFileRead = 0;
 
-    private BlockingRunner<Runnable> runner = null;
+    private BlockingRunner<CompletableRunnable<Skin>> runner = null;
 
     private ActorManager actorManager;
+
+    private SkinDatabase database;
 
 
     public SkinClient(final RavinPlugin plugin) {
@@ -102,11 +101,11 @@ public class SkinClient extends Module {
     @Override
     protected void load() throws ModuleLoadException {
         this.actorManager = plugin.getModule(ActorManager.class);
-
+        this.database = plugin.getModule(SkinDatabase.class);
         if (!skinFolder.exists()) {
             skinFolder.mkdir();
         }
-        final BlockingRunner<Runnable> newRunner = new BlockingRunner<>(new LinkedBlockingQueue<>());
+        final BlockingRunner<CompletableRunnable<Skin>> newRunner = new BlockingRunner<>(new LinkedBlockingQueue<>());
         if (runner != null) {
             newRunner.queueAll(runner.getRemaining());
         }
@@ -217,7 +216,23 @@ public class SkinClient extends Module {
 
     @Sync.AsyncOnly
     public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
-        this.runner.queue(new SkinUploadRequest(skin, future, sender));
+        this.runner.queue(new CompletableRunnable<>(future, (result) -> {
+            if (result == null) {
+                skin.discard(actorManager);
+                cachedSkins.remove(skin.getUUID());
+                if (sender != null) {
+                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + skin.getName() + "' as the request timed out! Try again later!"));
+                }
+            } else {
+                skin.updateTexture(result.data.texture.value, result.data.texture.signature);
+                skin.apply(actorManager);
+                database.saveSkin(skin);
+
+                if (sender != null) {
+                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + skin.getName() + "'!"));
+                }
+            }
+        }, 15000L));
     }
 
 
@@ -236,41 +251,6 @@ public class SkinClient extends Module {
 
     @Override
     public void cancel() {
-        runner.cancel();
-    }
-
-    private class SkinUploadRequest implements Runnable {
-        private final ActorSkin actorSkin;
-        private final CompletableFuture<Skin> future;
-        private final CommandSender sender;
-
-        private SkinUploadRequest(final ActorSkin actorSkin, final CompletableFuture<Skin> future, @Nullable final CommandSender sender) {
-            this.actorSkin = actorSkin;
-            this.future = future;
-            this.sender = sender;
-        }
-
-        @Override
-        public void run() {
-            try {
-                actorSkin.setValues(future.get(30, TimeUnit.SECONDS));
-                if (sender != null) {
-                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + actorSkin.getName() + "'!"));
-                }
-                actorSkin.apply(actorManager);
-                return;
-            } catch (final InterruptedException e) {
-                I.log(Level.SEVERE, "SkinUploadRequest with CompletableFuture was interrupted!", e);
-            } catch (final ExecutionException | IllegalArgumentException e) {
-                I.log(Level.SEVERE, "SkinUploadRequest encountered exception while waiting for CompletableFuture!", e);
-            } catch (final TimeoutException e) {
-                I.log(Level.WARNING, "SkinUploadRequest with CompletableFuture has timed out!", e);
-                if (sender != null) {
-                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + actorSkin.getName() + "' as the request timed out! Try again later!"));
-                }
-            }
-            actorSkin.discard(actorManager);
-            cachedSkins.remove(actorSkin.getName());
-        }
+        runner.cancel(true);
     }
 }

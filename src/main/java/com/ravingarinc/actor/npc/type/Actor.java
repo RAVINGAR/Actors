@@ -1,11 +1,11 @@
 package com.ravingarinc.actor.npc.type;
 
 import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.ActorFactory;
+import com.ravingarinc.actor.npc.ActorManager;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -53,10 +53,17 @@ public abstract class Actor<T extends Entity> {
     public void applyArgument(final Argument argument) {
         final String arg = argument.consume(this);
         if (arg != null) {
-            appliedArguments.put(argument.getPrefix(), arg);
+            final String prefix = argument.getPrefix();
+            appliedArguments.put(prefix, prefix + " " + arg);
         }
     }
 
+    /**
+     * Gets a list of the applied arguments to this actor
+     * These arguments are in the form of '--arg value'
+     *
+     * @return A list of arguments, possibly empty
+     */
     public List<String> getAppliedArguments() {
         return new ArrayList<>(appliedArguments.values());
     }
@@ -77,6 +84,10 @@ public abstract class Actor<T extends Entity> {
         return entity;
     }
 
+    public String getName() {
+        return entity.getName();
+    }
+
     public void addViewer(final Player player) {
         this.viewers.put(player.getUniqueId(), player);
     }
@@ -94,18 +105,29 @@ public abstract class Actor<T extends Entity> {
         return new HashSet<>(viewers.values());
     }
 
-    public abstract PacketContainer getPreSpawnPacket(ProtocolManager manager);
+    public abstract PacketContainer getSpawnPacket(Vector3 location, ActorManager manager);
 
-    public abstract PacketContainer getSpawnPacket(Vector3 location, ProtocolManager manager);
+    /**
+     * Refresh the appearance of an actor
+     */
+    public abstract void update(ActorManager actorManager);
 
-    public abstract PacketContainer getHidePacket(ProtocolManager manager);
+    /**
+     * Show an actor after it comes into view
+     */
+    public abstract void spawn(ActorManager actorManager, Vector3 location, Player viewer);
+
+    /**
+     * Spawn an actor for the first time
+     */
+    public abstract void create(ActorManager actorManager);
 
     public void updateName(final String displayName) {
         this.entity.setCustomName(displayName);
         this.entity.setCustomNameVisible(true);
     }
 
-    public PacketContainer getRemovePacket(final ProtocolManager manager) {
+    public PacketContainer getRemovePacket(final ActorManager manager) {
         final PacketContainer container = manager.createPacket(PacketType.Play.Server.ENTITY_DESTROY);
         final List<Integer> list = new ArrayList<>();
         list.add(id);

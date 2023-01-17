@@ -14,6 +14,7 @@ import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.jetbrains.annotations.Async;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -47,10 +48,9 @@ public class ActorDatabase extends Database {
 
     @Override
     public void cancel() {
-        queueFromSync(this::saveAllActors);
-        unloadedActors.clear();
-        // this will need to block until the queries are complete
         super.cancel();
+        unloadedActors.clear();
+        actorManager.getActors().forEach(this::saveActor);
     }
 
     @Sync.AsyncOnly
@@ -86,16 +86,14 @@ public class ActorDatabase extends Database {
             addUnloadedActor(uuid, type, x, y, z, worldName, arguments);
         } else {
             if (ActorFactory.getTypes().contains(type)) {
-                queue(() -> {
-                    Argument[] args;
-                    try {
-                        args = Registry.parseArguments(Registry.ACTOR_ARGS, 0, arguments.split(" "));
-                    } catch (final Argument.InvalidArgumentException exception) {
-                        I.log(Level.WARNING, "Actor '%s' - Could not parse stored arguments!", exception);
-                        args = new Argument[0];
-                    }
-                    actorManager.createActor(type, uuid, new Vector3(x, y, z, 0, 0, world), args);
-                });
+                Argument[] args;
+                try {
+                    args = Registry.parseArguments(Registry.ACTOR_ARGS, 0, arguments.split(" "), null);
+                } catch (final Argument.InvalidArgumentException exception) {
+                    I.log(Level.WARNING, "Actor '%s' - Could not parse stored arguments!", exception);
+                    args = new Argument[0];
+                }
+                actorManager.createActor(type, uuid, new Vector3(x, y, z, 0, 0, world), args);
             } else {
                 I.log(Level.WARNING, "Actor '%s' - Cannot load as actor type '%s' is unknown!", type);
                 addUnloadedActor(uuid, type, x, y, z, worldName, arguments);
@@ -112,12 +110,12 @@ public class ActorDatabase extends Database {
         // todo
     }
 
+    @Async.Schedule
     private void saveAllActors() {
         actorManager.getActors().forEach(actor -> queue(() -> saveActor(actor)));
     }
 
-    @Sync.AsyncOnly
-    private void saveActor(final Actor<?> actor) {
+    public void saveActor(final Actor<?> actor) {
         final Boolean exists = query(Actors.select, (statement) -> {
             try {
                 statement.setString(1, actor.getUUID().toString());

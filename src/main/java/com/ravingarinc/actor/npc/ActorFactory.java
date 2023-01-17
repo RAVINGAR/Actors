@@ -31,8 +31,8 @@ public class ActorFactory {
             final Object[] array = new Object[2];
             final World world = locale.getWorld();
             final LivingEntity entity = (LivingEntity) world.spawnEntity(locale, EntityType.HUSK, false);
-            //entity.setAI(false);
-            //entity.setInvulnerable(true);
+            entity.setAI(false);
+            entity.setInvulnerable(true);
             array[1] = entity;
 
             return new Pair<>(array, world.getPlayers());

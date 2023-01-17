@@ -5,6 +5,7 @@ import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.skin.ActorSkin;
 import com.ravingarinc.actor.skin.SkinClient;
+import org.jetbrains.annotations.Async;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,7 +18,7 @@ public class SkinDatabase extends Database {
     private SkinClient client;
 
     public SkinDatabase(final RavinPlugin plugin) {
-        super(Skins.SKINS, Skins.createTable, SkinDatabase.class, plugin, SkinClient.class);
+        super(Skins.SKINS, Skins.createTable, SkinDatabase.class, plugin);
     }
 
     @Override
@@ -29,8 +30,8 @@ public class SkinDatabase extends Database {
 
     @Override
     public void cancel() {
-        queueFromSync(this::saveAllSkins);
         super.cancel();
+        client.getSkins().forEach(this::saveSkin);
     }
 
     public void loadAllSkins() {
@@ -59,6 +60,7 @@ public class SkinDatabase extends Database {
         client.getSkins().forEach(skin -> queue(() -> saveSkin(skin)));
     }
 
+    @Async.Schedule
     public void saveSkin(final ActorSkin skin) {
         if (skin.getValue() == null || skin.getSignature() == null) {
             I.log(Level.WARNING, "Could not save skin '%s' as no texture has been loaded!", skin.getName());

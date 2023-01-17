@@ -177,7 +177,7 @@ bukkit {
     defaultPermission = 'FALSE' // 'TRUE', 'FALSE', 'OP' or 'NOT_OP'
 
     commands {
-        actors {
+        actor {
             aliases = ["a", "actors"]
             description = 'Actor Admin Command'
             usage = 'Unknown argument. Try /actor ?'

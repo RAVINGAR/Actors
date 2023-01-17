@@ -8,7 +8,6 @@ import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Async;
-import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -19,11 +18,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -39,46 +35,34 @@ public abstract class Database extends Module {
     @SafeVarargs
     public Database(final String name, final String createTable, final Class<? extends Database> identifier, final RavinPlugin plugin, final Class<? extends Module>... dependsOn) {
         super(identifier, plugin, dependsOn);
-        this.name = name;
+        this.name = name + ".db";
         this.scheduler = plugin.getServer().getScheduler();
         this.createTable = createTable;
-        this.path = plugin.getDataFolder() + "/" + name;
+        this.path = plugin.getDataFolder() + "/" + this.name;
         this.url = "jdbc:sqlite:" + this.path;
-    }
-
-    @Override
-    public String getName() {
-        return name;
     }
 
     @Override
     public void load() throws ModuleLoadException {
         final File file = new File(path);
-        if (!file.exists()) {
-            try (Connection connection = DriverManager.getConnection(url)) {
-                I.log(Level.INFO, "Created new database called '%s' with driver '%s'!", name, connection.getMetaData().getDriverName());
-            } catch (final SQLException exception) {
-                throw new ModuleLoadException(this, exception);
+        try {
+            if (!file.exists()) {
+                try (Connection connection = DriverManager.getConnection(url)) {
+                    I.log(Level.INFO, "Created new database called '%s' with driver '%s'!", name, connection.getMetaData().getDriverName());
+                }
             }
+            execute(createTable);
+        } catch (final SQLException exception) {
+            throw new ModuleLoadException(this, ModuleLoadException.Reason.SQL, exception);
         }
-        if (!execute(createTable)) {
-            throw new ModuleLoadException(this, ModuleLoadException.Reason.SQL);
-        }
+
         databaseRunner = new BlockingRunner<>(new LinkedBlockingQueue<>());
         databaseRunner.runTaskAsynchronously(plugin);
     }
 
     @Override
-    @Blocking
     public void cancel() {
-        final FutureTask<?> task = queueFromSync(() -> databaseRunner.cancel());
-        try {
-            task.get(2000, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException | InterruptedException e) {
-            I.log(Level.SEVERE, "Encountered exception attempting to save database!", e);
-        } catch (final TimeoutException e) {
-            I.log(Level.SEVERE, "Saving to database timed out! Data might not have been saved!", e);
-        }
+        databaseRunner.cancel();
     }
 
     @Sync.AsyncOnly
@@ -117,20 +101,12 @@ public abstract class Database extends Module {
      * Execute a query on the database.
      *
      * @param execution The query
-     * @return TRUE if successful, FALSE is an exception occurred.
      */
-    protected boolean execute(final String execution) {
-        if (isLoaded()) {
-            try (Connection connection = DriverManager.getConnection(url);
-                 Statement statement = connection.createStatement()) {
-                statement.execute(execution);
-                return true;
-            } catch (final SQLException e) {
-                I.log(Level.SEVERE, "Encountered issue executing statement to database!", e);
-            }
+    protected void execute(final String execution) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(url);
+             Statement statement = connection.createStatement()) {
+            statement.execute(execution);
         }
-
-        return false;
     }
 
     @Nullable

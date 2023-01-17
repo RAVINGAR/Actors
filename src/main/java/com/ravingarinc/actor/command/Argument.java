@@ -1,18 +1,20 @@
 package com.ravingarinc.actor.command;
 
+import com.ravingarinc.actor.api.TriFunction;
+import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class Argument {
+    private final CommandSender sender;
     private final String prefix;
     private final int minArgs;
     private final String[] args;
 
     private final Supplier<List<String>> tabCompletions;
-    private final BiFunction<Object, String[], String> consumer;
+    private final TriFunction<CommandSender, Object, String[], String> consumer;
 
     /**
      * An argument for a command. This will transform a given type of object based on the command.
@@ -23,13 +25,15 @@ public class Argument {
      * @param args     Can be null, however if not null it is expected this contains all arguments after the preceding
      *                 --arg (as specified by prefix) but up to the next --arg
      */
-    public Argument(final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final BiFunction<Object, String[], String> consumer, final String[] args) {
+    public Argument(final CommandSender sender, final String prefix, final int minArgs, final @Nullable Supplier<List<String>> tabCompletions, final TriFunction<CommandSender, Object, String[], String> consumer, final String[] args) {
+        this.sender = sender;
         this.prefix = prefix;
         this.minArgs = minArgs;
         this.consumer = consumer;
         this.args = args;
         this.tabCompletions = tabCompletions;
     }
+
 
     /**
      * Consume the value only if args is not null and its length is equal to or exceeds minArgs.
@@ -43,7 +47,7 @@ public class Argument {
         if (args == null) {
             throw new IllegalArgumentException("Cannot consume arguments as this Argument object does not have any args!");
         }
-        return consumer.apply(value, args);
+        return consumer.apply(sender, value, args);
     }
 
     public String getPrefix() {
@@ -78,11 +82,11 @@ public class Argument {
      *             --arg (as specified by prefix) but up to the next --arg
      * @return The filled argument
      */
-    public Argument createArgument(final String[] args) throws InvalidArgumentException {
+    public Argument createArgument(final CommandSender sender, final String[] args) throws InvalidArgumentException {
         if (args.length < minArgs) {
             throw new InvalidArgumentException();
         }
-        return new Argument(prefix, minArgs, tabCompletions, consumer, args);
+        return new Argument(sender, prefix, minArgs, tabCompletions, consumer, args);
     }
 
     public static class InvalidArgumentException extends Exception {

@@ -4,6 +4,7 @@ import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.ModuleListener;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.npc.type.Actor;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -71,6 +72,7 @@ public class ActorSelector extends ModuleListener {
 
     public void addSelection(final Player player, final Actor<?> actor) {
         playerSelections.put(player.getUniqueId(), actor.getUUID());
+        player.sendMessage(ChatColor.DARK_AQUA + "Actors | " + ChatColor.GRAY + "Selected Actor named '" + actor.getName());
     }
 
     @EventHandler(priority = EventPriority.LOW)

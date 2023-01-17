@@ -11,6 +11,10 @@ public class ModuleLoadException extends Exception {
         super(Reason.EXCEPTION.getMessage(module) + throwable.getMessage(), throwable);
     }
 
+    public ModuleLoadException(final Module module, final Reason reason, final Throwable throwable) {
+        super(reason.getMessage(module) + throwable.getMessage(), throwable);
+    }
+
     public enum Reason {
         DEPENDENCY() {
             @Override
@@ -56,7 +60,7 @@ public class ModuleLoadException extends Exception {
         SQL() {
             @Override
             public String getMessage(final Module module) {
-                return "Encountered an SQLite database issue in " + module.getName() + "due to; ";
+                return "Encountered an SQLite database issue in " + module.getName() + " due to; ";
             }
         },
         UNKNOWN {

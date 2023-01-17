@@ -5,9 +5,9 @@ import com.google.common.collect.Multimap;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.mineskin.data.Skin;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -35,15 +35,6 @@ public class ActorSkin {
         return uuid;
     }
 
-    @Sync.AsyncOnly
-    public void setValues(final Skin skin) {
-        if (skin == null) {
-            throw new IllegalArgumentException("Skin was null!");
-        }
-        this.value = skin.data.texture.value;
-        this.signature = skin.data.texture.signature;
-    }
-
     @Nullable
     public String getSignature() {
         return signature;
@@ -69,6 +60,7 @@ public class ActorSkin {
     /**
      * Updates an internal value and returns true if the value was changed, or null if it was not.
      */
+    @Contract(value = "null -> false")
     public boolean updateName(final String name) {
         if (name == null || name.equalsIgnoreCase(this.name)) {
             return false;
@@ -96,7 +88,7 @@ public class ActorSkin {
     public void apply(final ActorManager manager) {
         new ArrayList<>(linkedActors).forEach(actor -> {
             applyToProfile(actor);
-            manager.processActorUpdate(actor);
+            manager.updateActor(actor);
         });
     }
 
@@ -121,7 +113,7 @@ public class ActorSkin {
     public void discard(final ActorManager manager) {
         new ArrayList<>(linkedActors).forEach(actor -> {
             unapplyFromProfile(actor);
-            manager.processActorUpdate(actor);
+            manager.updateActor(actor);
         });
     }
 

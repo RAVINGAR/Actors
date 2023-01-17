@@ -51,7 +51,7 @@ public class ActorPacketInterceptor extends Module {
                 event.setCancelled(true);
                 final StructureModifier<Double> doubles = container.getDoubles();
                 final Vector3 location = new Vector3(doubles.read(0), doubles.read(1), doubles.read(2));
-                scheduler.runTaskAsynchronously(plugin, () -> actorManager.processActorSpawn(actor, event.getPlayer(), location));
+                scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, location, event.getPlayer()));
             }
         });
 
@@ -64,7 +64,14 @@ public class ActorPacketInterceptor extends Module {
                     if (list == null) {
                         return;
                     }
-                    scheduler.runTaskAsynchronously(plugin, () -> actorManager.processOnActorDestroy(event.getPlayer(), list));
+                    scheduler.runTaskAsynchronously(plugin, () -> {
+                        for (final int id : list) {
+                            final Actor<?> actor = actorManager.getActor(id);
+                            if (actor != null) {
+                                actorManager.queue(() -> actor.removeViewer(event.getPlayer()));
+                            }
+                        }
+                    });
                     // Todo when we have events for MANUALLY showing and hiding an actor, this must be different to listening for
                     //   these events.
                 }

@@ -6,10 +6,13 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.hover.content.Content;
 import net.md_5.bungee.api.chat.hover.content.Text;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class ChatUtil {
+    public static final String PREFIX = ChatColor.DARK_AQUA + "Actors " + ChatColor.GRAY + " | ";
+
     public static BaseComponent[] wrapCommandEvent(final String text, final ClickEvent.Action clickAction, final String clickValue, final String hoverValue) {
         return wrapCommandEvent(text, clickAction, clickValue, HoverEvent.Action.SHOW_TEXT, new Text(hoverValue));
     }

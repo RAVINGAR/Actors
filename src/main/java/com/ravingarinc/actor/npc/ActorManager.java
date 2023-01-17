@@ -1,5 +1,6 @@
 package com.ravingarinc.actor.npc;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
@@ -17,15 +18,14 @@ import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.skin.ActorSkin;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
@@ -34,7 +34,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 
 /**
@@ -48,6 +47,8 @@ public class ActorManager extends Module {
     private BlockingRunner<DelayedFutureTask> delayedRunner;
     private SkinClient client;
     private ProtocolManager manager;
+
+    private ActorDatabase database;
 
     /**
      * The constructor for a Module, should only ever be called by {@link Module#initialise(RavinPlugin, Class)}.
@@ -72,6 +73,7 @@ public class ActorManager extends Module {
     @Override
     protected void load() throws ModuleLoadException {
         client = plugin.getModule(SkinClient.class);
+        database = plugin.getModule(ActorDatabase.class);
         manager = ProtocolLibrary.getProtocolManager();
 
         runner = new BlockingRunner<>(new LinkedBlockingQueue<>());
@@ -91,93 +93,28 @@ public class ActorManager extends Module {
     }
 
     @Sync.AsyncOnly
-    public void createActor(final String type, final Vector3 location, final Argument[] args) {
+    public void createNewActor(final String type, final Vector3 location, final Argument[] args) {
         createActor(type, transformToVersion(UUID.randomUUID(), 2), location, args);
     }
 
     @Sync.AsyncOnly
     public void createActor(final String type, final UUID uuid, final Vector3 location, final Argument[] args) {
-        ActorFactory.build(type, uuid, location, args).ifPresent(this::spawnActor);
+        ActorFactory.build(type, uuid, location, args).ifPresent(actor -> {
+            actor.create(this);
+            queueLater(() -> {
+                if (getActor(actor.getUUID()) != null) {
+                    database.saveActor(actor);
+                }
+            }, 40L);
+        });
     }
 
     public Collection<Actor<?>> getActors() {
         return Collections.unmodifiableCollection(cachedActors.values());
     }
 
-    @Sync.AsyncOnly
-    public void spawnActor(final Actor<?> actor) {
-        queue(() -> {
-            final List<PacketContainer> packets = new ArrayList<>();
-            packets.add(actor.getRemovePacket(manager));
-            packets.add(actor.getPreSpawnPacket(manager));
-            packets.add(actor.getSpawnPacket(actor.getSpawnLocation(), manager));
-            final Collection<Player> viewers = actor.getViewers();
-            packets.forEach(packet -> {
-                for (final Player viewer : viewers) {
-                    try {
-                        manager.sendServerPacket(viewer, packet);
-                    } catch (final InvocationTargetException e) {
-                        I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
-                    }
-                }
-            });
-            // This is done AFTER the packets have been sent such that Actor Packet Interceptor does not spawn the entity
-            // twice!
-        });
-        queueLater(() -> {
-            final Collection<Player> viewers = actor.getViewers();
-            final PacketContainer packet = actor.getHidePacket(manager);
-            viewers.forEach(viewer -> {
-                try {
-                    manager.sendServerPacket(viewer, packet);
-                } catch (final InvocationTargetException e) {
-                    I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
-                }
-            });
-            cachedActors.put(actor.getId(), actor.getUUID(), actor);
-        }, 5L);
-    }
-
-    /**
-     * Show a given actor to a specific location at the given location.
-     *
-     * @param actor    The actor
-     * @param player   The player
-     * @param location The location
-     */
-    @Sync.AsyncOnly
-    public void processActorSpawn(final Actor<?> actor, final Player player, final Vector3 location) {
-        queue(() -> {
-            actor.addViewer(player);
-            try {
-                manager.sendServerPacket(player, actor.getPreSpawnPacket(manager));
-                manager.sendServerPacket(player, actor.getSpawnPacket(location, manager));
-            } catch (final InvocationTargetException e) {
-                I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
-                actor.removeViewer(player);
-            }
-        });
-
-        queueLater(() -> {
-            try {
-                manager.sendServerPacket(player, actor.getHidePacket(manager));
-            } catch (final InvocationTargetException e) {
-                I.log(Level.WARNING, "Encountered issue sending server packet to player!", e);
-                actor.removeViewer(player);
-            }
-        }, 5L);
-    }
-
-    @Sync.AsyncOnly
-    public void processOnActorDestroy(final Player player, final List<Integer> ids) {
-        for (final Integer id : ids) {
-            if (id != null) {
-                final Actor<?> actor = getActor(id);
-                if (actor != null) {
-                    queue(() -> actor.removeViewer(player));
-                }
-            }
-        }
+    public void cacheActor(final int id, final UUID uuid, final Actor<?> actor) {
+        cachedActors.put(id, uuid, actor);
     }
 
     @SuppressWarnings("all")
@@ -196,18 +133,56 @@ public class ActorManager extends Module {
      * @param actor The actor
      */
     @Async.Execute
-    public void processActorUpdate(final Actor<?> actor) {
-        final Collection<Player> viewers = actor.getViewers();
-        queue(() -> viewers.forEach(player -> sendPacket(player, actor.getPreSpawnPacket(manager))));
-        queueLater(() -> viewers.forEach(player -> sendPacket(player, actor.getHidePacket(manager))), 5L);
+    public void updateActor(final Actor<?> actor) {
+        actor.update(this);
     }
 
-    private void sendPacket(final Player receiver, final PacketContainer packet) {
+    public void sendPacket(final Player[] viewers, final PacketContainer packet) {
         try {
-            manager.sendServerPacket(receiver, packet);
+            for (final Player player : viewers) {
+                manager.sendServerPacket(player, packet);
+            }
         } catch (final InvocationTargetException exception) {
             I.log(Level.SEVERE, "Encountered issue sending server packet to player!", exception);
         }
+    }
+
+    public void sendPacket(final Player player, final PacketContainer packet) {
+        try {
+            manager.sendServerPacket(player, packet);
+        } catch (final InvocationTargetException exception) {
+            I.log(Level.SEVERE, "Encountered issue sending packet '" + packet.getType().toString() + "' to player!", exception);
+        }
+    }
+
+    public void sendPackets(final Player[] viewers, final PacketContainer[] packets) {
+        try {
+            for (final PacketContainer packet : packets) {
+                for (final Player player : viewers) {
+                    manager.sendServerPacket(player, packet);
+                }
+            }
+        } catch (final InvocationTargetException exception) {
+            I.log(Level.SEVERE, "Encountered issue sending server packet to player!", exception);
+        }
+    }
+
+    public void sendPackets(final Player receiver, final PacketContainer... packets) {
+        try {
+            for (final PacketContainer packet : packets) {
+                manager.sendServerPacket(receiver, packet);
+            }
+        } catch (final InvocationTargetException exception) {
+            I.log(Level.SEVERE, "Encountered issue sending server packet to player!", exception);
+        }
+    }
+
+    public PacketContainer createPacket(final PacketType type) {
+        return createPacket(type, true);
+    }
+
+    public PacketContainer createPacket(final PacketType type, final boolean forceDefaults) {
+        return manager.createPacket(type, forceDefaults);
     }
 
     /**
@@ -223,27 +198,11 @@ public class ActorManager extends Module {
             skin.linkActor(actor);
             try {
                 future.get(1000, TimeUnit.MILLISECONDS);
-                processActorUpdate(actor);
+                updateActor(actor);
             } catch (ExecutionException | InterruptedException e) {
                 I.log(Level.WARNING, "Encountered exception on ActorSkinChange request!", e);
             } catch (final TimeoutException e) {
                 I.log(Level.WARNING, "ActorSkinChange request timed out!", e);
-            }
-        });
-    }
-
-    /**
-     * Hides an actor from a specific player. This queues an asynchronous execution
-     *
-     * @param actor  The actor
-     * @param player The player
-     */
-    public void hideActor(final Actor<?> actor, final Player player) {
-        queueAsync(() -> {
-            try {
-                manager.sendServerPacket(player, actor.getRemovePacket(manager));
-            } catch (final InvocationTargetException e) {
-                I.log(Level.SEVERE, "Encountered issue sending server packet to player!", e);
             }
         });
     }
@@ -290,27 +249,23 @@ public class ActorManager extends Module {
      * @return The future task
      */
     @Sync.AsyncOnly
-    public FutureTask<?> queueLater(final Runnable runnable, final long delay) {
-        final FutureTask<?> future = new FutureTask<>(runnable, true);
-        delayedRunner.queue(new DelayedFutureTask(future, (task) -> this.runner.queue(future), delay * 1000 / 20));
+    public FutureTask<Object> queueLater(final Runnable runnable, final long delay) {
+        return queueLater(runnable, true, delay);
+    }
+
+    @Sync.AsyncOnly
+    public FutureTask<Object> queueLater(final Runnable runnable, final Object result, final long delay) {
+        final FutureTask<Object> future = new FutureTask<>(runnable, result);
+        delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), result, delay * 1000 / 20));
         return future;
     }
 
-    private static class DelayedFutureTask implements Delayed, Runnable {
+    private static class DelayedFutureTask extends FutureTask<Object> implements Delayed {
         private final long readyTime;
 
-        private final FutureTask<?> task;
-        private final Consumer<FutureTask<?>> consumer;
-
-        public DelayedFutureTask(final FutureTask<?> task, final Consumer<FutureTask<?>> consumer, final long delay) {
-            this.task = task;
-            this.consumer = consumer;
+        public DelayedFutureTask(final Runnable runnable, final Object result, final long delay) {
+            super(runnable, result);
             this.readyTime = System.currentTimeMillis() + delay;
-        }
-
-        @Override
-        public void run() {
-            consumer.accept(task);
         }
 
         @Override
