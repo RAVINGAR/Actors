@@ -32,19 +32,15 @@ public class ActorFactory {
             final World world = locale.getWorld();
             final LivingEntity entity = (LivingEntity) world.spawnEntity(locale, EntityType.HUSK, false);
             entity.setAI(false);
-            entity.setInvulnerable(true);
             array[1] = entity;
 
             return new Pair<>(array, world.getPlayers());
         });
-
         final Object[] array = computations.getLeft();
         final LivingEntity entity = (LivingEntity) array[1];
         final PlayerActor actor = new PlayerActor(uuid, entity, location);
         computations.getRight().forEach(actor::addViewer);
-        for (final Argument arg : args) {
-            actor.applyArgument(arg);
-        }
+        actor.applyArguments(args);
         return actor;
     });
 

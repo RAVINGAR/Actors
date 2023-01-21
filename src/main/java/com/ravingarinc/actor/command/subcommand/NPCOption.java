@@ -79,8 +79,12 @@ public class NPCOption extends CommandOption {
         Registry.registerArgument(Registry.ACTOR_ARGS, "--invuln", 1,
                 () -> Arrays.stream((new String[]{"true", "false"})).toList(),
                 (sender, object, args) -> {
-                    if (object instanceof LivingActor) {
-
+                    if (object instanceof LivingActor livingActor) {
+                        if (args[0].equalsIgnoreCase("true")) {
+                            livingActor.setInvuln(true);
+                        } else if (args[0].equalsIgnoreCase("false")) {
+                            livingActor.setInvuln(false);
+                        }
                     }
                     return null;
                 });
@@ -143,9 +147,7 @@ public class NPCOption extends CommandOption {
                 } else {
                     try {
                         final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 2, args, sender);
-                        for (final Argument arg : arguments) {
-                            actor.applyArgument(arg);
-                        }
+                        actor.applyArguments(arguments);
                         actor.update(manager);
                         sender.sendMessage(ChatUtil.PREFIX + ChatColor.AQUA + "Successfully applied update! The actor now has the following arguments;");
                         actor.getAppliedArguments().forEach(arg -> {

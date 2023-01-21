@@ -37,7 +37,7 @@ public class Argument {
 
     /**
      * Consume the value only if args is not null and its length is equal to or exceeds minArgs.
-     * This should only ever be called by the actor through {@link com.ravingarinc.actor.npc.type.Actor#applyArgument(Argument)}
+     * This should only ever be called by the actor through {@link com.ravingarinc.actor.npc.type.Actor#applyArguments(Argument...)}
      *
      * @param value The value
      * @return The final applied argument string for storing in a database with the prefix already appended.

@@ -2,12 +2,19 @@ package com.ravingarinc.actor.npc.type;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
+import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.AsynchronousException;
+import com.ravingarinc.actor.api.async.ConcurrentKeyedQueue;
+import com.ravingarinc.actor.api.async.KeyedRunnable;
+import com.ravingarinc.actor.api.async.Sync;
+import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.Blocking;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 
 public abstract class Actor<T extends Entity> {
 
@@ -25,18 +33,20 @@ public abstract class Actor<T extends Entity> {
      */
     protected final UUID uuid;
     protected final T entity;
-
     protected final ActorFactory.Type<?> type;
-
     /**
      * The entity id which is dependent on the spawn cycle of the actor.
      */
     protected final int id;
     protected final Map<UUID, Player> viewers;
     protected final Map<String, String> appliedArguments;
+    protected final ConcurrentKeyedQueue<KeyedRunnable> syncUpdates;
+    protected String name;
     protected Vector3 spawnLocation;
 
     public Actor(final ActorFactory.Type<?> type, final UUID uuid, final T entity, final Vector3 spawnLocation) {
+        this.syncUpdates = new ConcurrentKeyedQueue<>();
+        this.name = "Actor";
         this.uuid = uuid;
         this.type = type;
         this.entity = entity;
@@ -50,11 +60,13 @@ public abstract class Actor<T extends Entity> {
         return type;
     }
 
-    public void applyArgument(final Argument argument) {
-        final String arg = argument.consume(this);
-        if (arg != null) {
-            final String prefix = argument.getPrefix();
-            appliedArguments.put(prefix, prefix + " " + arg);
+    public void applyArguments(final Argument... arguments) {
+        for (final Argument argument : arguments) {
+            final String arg = argument.consume(this);
+            if (arg != null) {
+                final String prefix = argument.getPrefix();
+                appliedArguments.put(prefix, prefix + " " + arg);
+            }
         }
     }
 
@@ -85,7 +97,7 @@ public abstract class Actor<T extends Entity> {
     }
 
     public String getName() {
-        return entity.getName();
+        return name;
     }
 
     public void addViewer(final Player player) {
@@ -123,8 +135,12 @@ public abstract class Actor<T extends Entity> {
     public abstract void create(ActorManager actorManager);
 
     public void updateName(final String displayName) {
-        this.entity.setCustomName(displayName);
-        this.entity.setCustomNameVisible(true);
+        this.name = displayName;
+        syncUpdate(Update.NAME, () -> {
+            final Entity entity = getEntity();
+            entity.setCustomName(displayName);
+            entity.setCustomNameVisible(true);
+        });
     }
 
     public PacketContainer getRemovePacket(final ActorManager manager) {
@@ -147,8 +163,43 @@ public abstract class Actor<T extends Entity> {
         return uuid.equals(actor.uuid);
     }
 
+    public void syncUpdate(final String key, final Runnable runnable) {
+        syncUpdates.add(new KeyedRunnable(key) {
+            @Override
+            public void run() {
+                runnable.run();
+            }
+        });
+    }
+
     @Override
     public int hashCode() {
         return uuid.hashCode();
+    }
+
+    /**
+     * Applies any queued sync updates to this actor. This method blocks and is expected
+     * to be called from an async context
+     */
+    @Sync.AsyncOnly
+    @Blocking
+    public void apply() {
+        try {
+            AsyncHandler.executeBlockingSyncComputation(() -> {
+                while (!syncUpdates.isEmpty()) {
+                    syncUpdates.poll().run();
+                }
+                return true;
+            });
+        } catch (final AsynchronousException e) {
+            I.log(Level.SEVERE, "Encountered issues applying synchronised updates to actor!", e);
+        }
+
+    }
+
+    protected static class Update {
+        public final static String NAME = "name_update";
+        public final static String LOCATION = "location_update";
+        public final static String INVULN = "invuln_update";
     }
 }

@@ -6,30 +6,22 @@ import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
 public class LivingActor extends Actor<LivingEntity> {
-    protected String name;
+
 
     protected boolean isInvuln;
 
     public LivingActor(final ActorFactory.Type<?> type, final UUID uuid, final LivingEntity entity, final Vector3 spawnLocation) {
         super(type, uuid, entity, spawnLocation);
-        this.name = "Actor";
-        this.isInvuln = true;
+        this.setInvuln(true);
     }
 
-    @Override
-    public void updateName(@NotNull final String displayName) {
-        this.name = displayName;
-        // todo hologram thingies
-    }
-
-    @Override
-    public String getName() {
-        return name;
+    public void setInvuln(final boolean isInvuln) {
+        this.isInvuln = isInvuln;
+        syncUpdate(Update.INVULN, () -> getEntity().setInvulnerable(isInvuln));
     }
 
     @Override

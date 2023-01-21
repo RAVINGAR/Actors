@@ -134,6 +134,7 @@ public class ActorManager extends Module {
      */
     @Async.Execute
     public void updateActor(final Actor<?> actor) {
+        actor.apply();
         actor.update(this);
     }
 
