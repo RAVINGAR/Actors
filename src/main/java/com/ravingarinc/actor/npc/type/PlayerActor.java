@@ -24,7 +24,7 @@ public class PlayerActor extends LivingActor {
 
     public PlayerActor(final UUID uuid, final LivingEntity entity, final Vector3 spawnLocation) {
         super(ActorFactory.PLAYER, uuid, entity, spawnLocation);
-        this.gameProfile = new WrappedGameProfile(uuid, name);
+        this.gameProfile = new WrappedGameProfile(uuid, getName());
     }
 
     @Override
@@ -42,7 +42,7 @@ public class PlayerActor extends LivingActor {
                     getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager),
                     getSpawnPacket(location, manager));
         });
-        manager.queueLater(() -> manager.sendPacket(viewer, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 5L);
+        manager.queueLater(() -> manager.sendPacket(viewer, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 10L);
 
     }
 
@@ -84,7 +84,7 @@ public class PlayerActor extends LivingActor {
 
     @Override
     public void updateName(final @NotNull String displayName) {
-        this.name = displayName;
+        this.name.setRelease(displayName);
         // todo hologram thingies
         data = null;
     }
@@ -110,7 +110,7 @@ public class PlayerActor extends LivingActor {
                     gameProfile,
                     100,
                     EnumWrappers.NativeGameMode.SURVIVAL,
-                    WrappedChatComponent.fromText(name));
+                    WrappedChatComponent.fromText(getName()));
         }
         return data;
     }

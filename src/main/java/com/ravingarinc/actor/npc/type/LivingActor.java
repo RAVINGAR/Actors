@@ -10,18 +10,9 @@ import org.bukkit.entity.Player;
 import java.util.UUID;
 
 public class LivingActor extends Actor<LivingEntity> {
-
-
-    protected boolean isInvuln;
-
     public LivingActor(final ActorFactory.Type<?> type, final UUID uuid, final LivingEntity entity, final Vector3 spawnLocation) {
         super(type, uuid, entity, spawnLocation);
         this.setInvuln(true);
-    }
-
-    public void setInvuln(final boolean isInvuln) {
-        this.isInvuln = isInvuln;
-        syncUpdate(Update.INVULN, () -> getEntity().setInvulnerable(isInvuln));
     }
 
     @Override

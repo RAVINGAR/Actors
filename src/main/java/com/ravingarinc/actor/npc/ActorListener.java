@@ -9,24 +9,32 @@ import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.Module;
+import com.ravingarinc.actor.api.ModuleListener;
 import com.ravingarinc.actor.api.ModuleLoadException;
+import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 
-public class ActorPacketInterceptor extends Module {
+public class ActorListener extends ModuleListener {
     private final Set<PacketType> spawnPackets;
     private final BukkitScheduler scheduler;
     private ActorManager actorManager;
     private ProtocolManager protocolManager;
 
-    public ActorPacketInterceptor(final RavinPlugin plugin) {
-        super(ActorPacketInterceptor.class, plugin, ActorManager.class);
+    public ActorListener(final RavinPlugin plugin) {
+        super(ActorListener.class, plugin, ActorManager.class);
         scheduler = plugin.getServer().getScheduler();
         spawnPackets = new HashSet<>();
         spawnPackets.add(PacketType.Play.Server.SPAWN_ENTITY_LIVING);
@@ -34,7 +42,7 @@ public class ActorPacketInterceptor extends Module {
     }
 
     @Override
-    protected void load() throws ModuleLoadException {
+    public void load() throws ModuleLoadException {
         actorManager = plugin.getModule(ActorManager.class);
         protocolManager = ProtocolLibrary.getProtocolManager();
 
@@ -51,7 +59,9 @@ public class ActorPacketInterceptor extends Module {
                 event.setCancelled(true);
                 final StructureModifier<Double> doubles = container.getDoubles();
                 final Vector3 location = new Vector3(doubles.read(0), doubles.read(1), doubles.read(2));
-                scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, location, event.getPlayer()));
+                final Player player = event.getPlayer();
+                I.log(Level.WARNING, "Actor Spawn Packet!");
+                scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, location, player));
             }
         });
 
@@ -64,11 +74,14 @@ public class ActorPacketInterceptor extends Module {
                     if (list == null) {
                         return;
                     }
+                    final Player player = event.getPlayer();
+
                     scheduler.runTaskAsynchronously(plugin, () -> {
                         for (final int id : list) {
+                            I.log(Level.WARNING, "Actor Destroy Packet!");
                             final Actor<?> actor = actorManager.getActor(id);
                             if (actor != null) {
-                                actorManager.queue(() -> actor.removeViewer(event.getPlayer()));
+                                actorManager.queue(() -> actor.removeViewer(player));
                             }
                         }
                     });
@@ -77,10 +90,41 @@ public class ActorPacketInterceptor extends Module {
                 }
             }
         });
+        super.load();
     }
 
     @Override
     public void cancel() {
+        super.cancel();
         protocolManager.removePacketListeners(plugin);
+    }
+
+    @EventHandler
+    public void onEntityTarget(final EntityTargetEvent event) {
+
+    }
+
+    @EventHandler
+    public void onPlayerJoin(final PlayerJoinEvent event) {
+        final Player player = event.getPlayer();
+        //actorManager.filterActors(actor ->
+        //        actor.getSpawnLocation().getWorldName().equalsIgnoreCase(player.getWorld().getName()));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDamage(final EntityDamageEvent event) {
+        // handle on actor damage
+        final Actor<?> actor = actorManager.getActor(event.getEntity().getEntityId());
+        if (actor == null) {
+            return;
+        }
+        if (actor.isInvuln()) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onEntityDeath(final EntityDeathEvent event) {
+        // handle on actor death
     }
 }

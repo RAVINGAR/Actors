@@ -17,7 +17,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,25 +26,21 @@ import java.util.logging.Level;
 
 public class ActorFactory {
     public static final Type<PlayerActor> PLAYER = new Type<>("player", (uuid, location, args) -> {
-        final Pair<Object[], List<Player>> computations = AsyncHandler.executeBlockingSyncComputation(() -> {
+        final Pair<LivingEntity, List<Player>> computations = AsyncHandler.executeBlockingSyncComputation(() -> {
             final Location locale = location.toBukkitLocation();
-            final Object[] array = new Object[2];
             final World world = locale.getWorld();
-            final LivingEntity entity = (LivingEntity) world.spawnEntity(locale, EntityType.HUSK, false);
+            final LivingEntity entity = (LivingEntity) world.spawnEntity(locale, EntityType.WOLF, false);
             entity.setAI(false);
-            array[1] = entity;
 
-            return new Pair<>(array, world.getPlayers());
+            return new Pair<>(entity, world.getPlayers());
         });
-        final Object[] array = computations.getLeft();
-        final LivingEntity entity = (LivingEntity) array[1];
-        final PlayerActor actor = new PlayerActor(uuid, entity, location);
+        final PlayerActor actor = new PlayerActor(uuid, computations.getLeft(), location);
         computations.getRight().forEach(actor::addViewer);
         actor.applyArguments(args);
         return actor;
     });
 
-    private static final Map<String, Type<?>> actorTypes = new HashMap<>();
+    private static final Map<String, Type<?>> actorTypes = new LinkedHashMap<>();
 
     static {
         actorTypes.put(PLAYER.getKey(), PLAYER);

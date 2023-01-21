@@ -11,7 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class ChatUtil {
-    public static final String PREFIX = ChatColor.DARK_AQUA + "Actors " + ChatColor.GRAY + " | ";
+    public static final String PREFIX = ChatColor.DARK_AQUA + "Actors" + ChatColor.GRAY + " | ";
 
     public static BaseComponent[] wrapCommandEvent(final String text, final ClickEvent.Action clickAction, final String clickValue, final String hoverValue) {
         return wrapCommandEvent(text, clickAction, clickValue, HoverEvent.Action.SHOW_TEXT, new Text(hoverValue));

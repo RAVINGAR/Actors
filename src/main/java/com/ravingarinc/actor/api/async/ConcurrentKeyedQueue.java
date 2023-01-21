@@ -8,15 +8,42 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 public class ConcurrentKeyedQueue<T extends ConcurrentKeyedQueue.Keyed> implements Queue<T> {
     private final ConcurrentHashMap<String, AtomicReference<T>> map;
     private final ConcurrentLinkedQueue<AtomicReference<T>> queue;
 
-    public ConcurrentKeyedQueue() {
+    private final Function<T, Boolean> offerFunction;
+
+    public ConcurrentKeyedQueue(final Mode mode) {
         super();
         map = new ConcurrentHashMap<>();
         queue = new ConcurrentLinkedQueue<>();
+
+        offerFunction = switch (mode) {
+            case UPDATE -> (element) -> {
+                AtomicReference<T> reference = map.get(element.getKey());
+                if (reference == null) {
+                    reference = new AtomicReference<>(element);
+                    map.put(element.getKey(), reference);
+                    queue.add(reference);
+                } else {
+                    reference.setRelease(element);
+                }
+                return true;
+            };
+            case IGNORE -> (element) -> {
+                AtomicReference<T> reference = map.get(element.getKey());
+                if (reference == null) {
+                    reference = new AtomicReference<>(element);
+                    map.put(element.getKey(), reference);
+                    queue.add(reference);
+                    return true;
+                }
+                return false;
+            };
+        };
     }
 
     @Override
@@ -50,15 +77,7 @@ public class ConcurrentKeyedQueue<T extends ConcurrentKeyedQueue.Keyed> implemen
 
     @Override
     public boolean offer(final T element) {
-        AtomicReference<T> reference = map.get(element.getKey());
-        if (reference == null) {
-            reference = new AtomicReference<>(element);
-            map.put(element.getKey(), reference);
-            queue.add(reference);
-        } else {
-            reference.setRelease(element);
-        }
-        return true;
+        return offerFunction.apply(element);
     }
 
     @Override
@@ -149,6 +168,17 @@ public class ConcurrentKeyedQueue<T extends ConcurrentKeyedQueue.Keyed> implemen
     @Deprecated
     public <T1> T1 @NotNull [] toArray(final T1 @NotNull [] a) {
         throw new UnsupportedOperationException("This method is not supported by ConcurrentKeyedQueue");
+    }
+
+    public enum Mode {
+        /**
+         * Update mode means that if a similarly named keyed value already exists, then update the value.
+         */
+        UPDATE,
+        /**
+         * Ignore mode means that is a similarly named key value already exists, then do not update the value
+         */
+        IGNORE
     }
 
     public interface Keyed {

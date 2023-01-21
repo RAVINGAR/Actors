@@ -10,6 +10,7 @@ import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
 import com.ravingarinc.actor.api.async.BlockingRunner;
+import com.ravingarinc.actor.api.async.DelayedFutureTask;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
@@ -21,24 +22,25 @@ import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Async;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 /**
  * Manages all currently loaded actors and is responsible for creating new ones. Any tasks, especially packet sending
- * should be done through this manager through the method {@link #queueAsync(Runnable)} as to prevent synchronisation issues
+ * should be done through this manager through the method {@link #queue(Runnable)} as to prevent synchronisation issues
  */
 public class ActorManager extends Module {
 
@@ -101,12 +103,12 @@ public class ActorManager extends Module {
     public void createActor(final String type, final UUID uuid, final Vector3 location, final Argument[] args) {
         ActorFactory.build(type, uuid, location, args).ifPresent(actor -> {
             actor.create(this);
-            queueLater(() -> {
-                if (getActor(actor.getUUID()) != null) {
-                    database.saveActor(actor);
-                }
-            }, 40L);
+            saveLater(actor);
         });
+    }
+
+    public Set<Actor<?>> filterActors(final Predicate<? super Actor<?>> filter) {
+        return cachedActors.values().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
     }
 
     public Collection<Actor<?>> getActors() {
@@ -136,6 +138,15 @@ public class ActorManager extends Module {
     public void updateActor(final Actor<?> actor) {
         actor.apply();
         actor.update(this);
+        saveLater(actor);
+    }
+
+    public void saveLater(final Actor<?> actor) {
+        queueLater(() -> {
+            if (getActor(actor.getUUID()) != null) {
+                database.saveActor(actor);
+            }
+        }, 40L);
     }
 
     public void sendPacket(final Player[] viewers, final PacketContainer packet) {
@@ -223,7 +234,6 @@ public class ActorManager extends Module {
      *
      * @param result The expected result
      */
-    @Sync.AsyncOnly
     public <T> FutureTask<T> queue(final T result, final Runnable runnable) {
         final FutureTask<T> future = new FutureTask<>(runnable, result);
         this.runner.queue(future);
@@ -237,7 +247,6 @@ public class ActorManager extends Module {
      * @param runnable The runnable
      * @return The future
      */
-    @Sync.AsyncOnly
     public FutureTask<?> queue(final Runnable runnable) {
         return queue(true, runnable);
     }
@@ -249,37 +258,13 @@ public class ActorManager extends Module {
      * @param delay    The delay in ticks
      * @return The future task
      */
-    @Sync.AsyncOnly
     public FutureTask<Object> queueLater(final Runnable runnable, final long delay) {
         return queueLater(runnable, true, delay);
     }
 
-    @Sync.AsyncOnly
     public FutureTask<Object> queueLater(final Runnable runnable, final Object result, final long delay) {
         final FutureTask<Object> future = new FutureTask<>(runnable, result);
         delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), result, delay * 1000 / 20));
         return future;
-    }
-
-    private static class DelayedFutureTask extends FutureTask<Object> implements Delayed {
-        private final long readyTime;
-
-        public DelayedFutureTask(final Runnable runnable, final Object result, final long delay) {
-            super(runnable, result);
-            this.readyTime = System.currentTimeMillis() + delay;
-        }
-
-        @Override
-        public long getDelay(@NotNull final TimeUnit unit) {
-            return unit.convert(this.readyTime - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public int compareTo(@NotNull final Delayed other) {
-            if (other instanceof DelayedFutureTask that) {
-                return (int) (this.readyTime - that.readyTime);
-            }
-            throw new IllegalArgumentException("Cannot compare DelayedEvent to generic Delayed object!");
-        }
     }
 }

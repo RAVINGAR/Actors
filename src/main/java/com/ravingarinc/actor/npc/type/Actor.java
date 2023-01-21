@@ -12,6 +12,7 @@ import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.pathing.PathingAgent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Blocking;
@@ -24,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
 public abstract class Actor<T extends Entity> {
@@ -41,12 +44,15 @@ public abstract class Actor<T extends Entity> {
     protected final Map<UUID, Player> viewers;
     protected final Map<String, String> appliedArguments;
     protected final ConcurrentKeyedQueue<KeyedRunnable> syncUpdates;
-    protected String name;
+    protected final AtomicReference<String> name;
+    protected final AtomicBoolean isInvuln;
     protected Vector3 spawnLocation;
 
+    protected PathingAgent pathingAgent;
+
     public Actor(final ActorFactory.Type<?> type, final UUID uuid, final T entity, final Vector3 spawnLocation) {
-        this.syncUpdates = new ConcurrentKeyedQueue<>();
-        this.name = "Actor";
+        this.syncUpdates = new ConcurrentKeyedQueue<>(ConcurrentKeyedQueue.Mode.IGNORE);
+        this.name = new AtomicReference<>("Actor");
         this.uuid = uuid;
         this.type = type;
         this.entity = entity;
@@ -54,6 +60,22 @@ public abstract class Actor<T extends Entity> {
         this.spawnLocation = spawnLocation;
         this.viewers = new ConcurrentHashMap<>();
         this.appliedArguments = new HashMap<>();
+        this.isInvuln = new AtomicBoolean(true);
+        this.pathingAgent = new PathingAgent();
+        this.setInvuln(true);
+    }
+
+    public PathingAgent getPathingAgent() {
+        return pathingAgent;
+    }
+
+    public boolean isInvuln() {
+        return this.isInvuln.getAcquire();
+    }
+
+    public void setInvuln(final boolean isInvuln) {
+        this.isInvuln.setRelease(isInvuln);
+        syncUpdate(Update.INVULN, () -> getEntity().setInvulnerable(isInvuln()));
     }
 
     public ActorFactory.Type<?> getType() {
@@ -97,7 +119,7 @@ public abstract class Actor<T extends Entity> {
     }
 
     public String getName() {
-        return name;
+        return name.getAcquire();
     }
 
     public void addViewer(final Player player) {
@@ -135,10 +157,10 @@ public abstract class Actor<T extends Entity> {
     public abstract void create(ActorManager actorManager);
 
     public void updateName(final String displayName) {
-        this.name = displayName;
+        this.name.setRelease(displayName);
         syncUpdate(Update.NAME, () -> {
             final Entity entity = getEntity();
-            entity.setCustomName(displayName);
+            entity.setCustomName(getName());
             entity.setCustomNameVisible(true);
         });
     }

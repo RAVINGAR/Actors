@@ -9,7 +9,7 @@ import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
-import com.ravingarinc.actor.npc.ActorSelector;
+import com.ravingarinc.actor.npc.selector.ActorSelector;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.LivingActor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
@@ -134,7 +134,7 @@ public class NPCOption extends CommandOption {
                 final Actor<?> actor = selector.getSelection(player);
                 if (actor == null) {
                     sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "You have no actor selected!");
-                    if (selector.isSelecting(player)) {
+                    if (!selector.isSelecting(player)) {
                         ChatUtil.send(player, new ComponentBuilder(ChatColor.GRAY + "Use ")
                                 .append("/actor selector on")
                                 .event(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/actor selector on"))
@@ -150,9 +150,7 @@ public class NPCOption extends CommandOption {
                         actor.applyArguments(arguments);
                         actor.update(manager);
                         sender.sendMessage(ChatUtil.PREFIX + ChatColor.AQUA + "Successfully applied update! The actor now has the following arguments;");
-                        actor.getAppliedArguments().forEach(arg -> {
-                            sender.sendMessage(ChatColor.GRAY + arg);
-                        });
+                        actor.getAppliedArguments().forEach(arg -> sender.sendMessage(ChatColor.GRAY + arg));
                     } catch (final Argument.InvalidArgumentException e) {
                         sender.sendMessage(ChatColor.RED + e.getMessage());
                     }
