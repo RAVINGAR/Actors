@@ -9,7 +9,7 @@ import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
-import com.ravingarinc.actor.npc.selector.ActorSelector;
+import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.LivingActor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
@@ -32,13 +32,13 @@ public class NPCOption extends CommandOption {
 
     private final SkinClient client;
 
-    private final ActorSelector selector;
+    private final SelectorManager selector;
 
     public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
-        super(parent, 2, (sender, args) -> false);
+        super("npc", parent, "actors.npc","", 2, (sender, args) -> false);
         this.manager = plugin.getModule(ActorManager.class);
         this.client = plugin.getModule(SkinClient.class);
-        this.selector = plugin.getModule(ActorSelector.class);
+        this.selector = plugin.getModule(SelectorManager.class);
         registerArguments();
         registerOptions();
     }
@@ -131,8 +131,19 @@ public class NPCOption extends CommandOption {
 
         addOption("update", 3, (sender, args) -> {
             if (sender instanceof Player player) {
-                final Actor<?> actor = selector.getSelection(player);
-                if (actor == null) {
+                final Object object = selector.getSelection(player);
+                if (object instanceof Actor<?> actor) {
+                    try {
+                        final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 2, args, sender);
+                        actor.applyArguments(arguments);
+                        actor.update(manager);
+                        sender.sendMessage(ChatUtil.PREFIX + ChatColor.AQUA + "Successfully applied update! The actor now has the following arguments;");
+                        actor.getAppliedArguments().forEach(arg -> sender.sendMessage(ChatColor.GRAY + arg));
+                    } catch (final Argument.InvalidArgumentException e) {
+                        sender.sendMessage(ChatColor.RED + e.getMessage());
+                    }
+
+                } else {
                     sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "You have no actor selected!");
                     if (!selector.isSelecting(player)) {
                         ChatUtil.send(player, new ComponentBuilder(ChatColor.GRAY + "Use ")
@@ -143,16 +154,6 @@ public class NPCOption extends CommandOption {
                                 .event((ClickEvent) null)
                                 .event((HoverEvent) null)
                                 .create());
-                    }
-                } else {
-                    try {
-                        final Argument[] arguments = Registry.parseArguments(Registry.ACTOR_ARGS, 2, args, sender);
-                        actor.applyArguments(arguments);
-                        actor.update(manager);
-                        sender.sendMessage(ChatUtil.PREFIX + ChatColor.AQUA + "Successfully applied update! The actor now has the following arguments;");
-                        actor.getAppliedArguments().forEach(arg -> sender.sendMessage(ChatColor.GRAY + arg));
-                    } catch (final Argument.InvalidArgumentException e) {
-                        sender.sendMessage(ChatColor.RED + e.getMessage());
                     }
                 }
             } else {

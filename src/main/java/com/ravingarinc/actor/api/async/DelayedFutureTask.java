@@ -1,17 +1,16 @@
 package com.ravingarinc.actor.api.async;
 
-import com.ravingarinc.actor.npc.ActorManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.Delayed;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
-public class DelayedFutureTask extends FutureTask<Object> implements Delayed {
+public class DelayedFutureTask extends FutureTask<Void> implements Delayed {
     private final long readyTime;
 
-    public DelayedFutureTask(final Runnable runnable, final Object result, final long delay) {
-        super(runnable, result);
+    public DelayedFutureTask(final Runnable runnable, final long delay) {
+        super(runnable, null);
         this.readyTime = System.currentTimeMillis() + delay;
     }
 

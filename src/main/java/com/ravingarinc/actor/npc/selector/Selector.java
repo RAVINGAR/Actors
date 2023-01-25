@@ -1,58 +1,52 @@
 package com.ravingarinc.actor.npc.selector;
 
-import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.PathFactory;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.Nullable;
+
+import javax.annotation.Nullable;
 
 public class Selector {
-    // idk todo maybe change this to an interface that selects an object but im lazy right now so
+    private @Nullable Selectable value;
+
+    private @Nullable Selectable lastSelection;
     private final Player player;
-    private @Nullable Actor<?> selectedActor;
-
-    private @Nullable PathFactory.Type<?> selectedPath;
-
-    private Mode mode;
-
-    public Selector(final Player player) {
+    public Selector(Player player) {
         this.player = player;
-        this.mode = Mode.ACTOR;
-        this.selectedActor = null;
+        this.value = null;
+        this.lastSelection = null;
     }
 
-    public void select(final Actor<?> actor) {
-        selectedActor = actor;
+    public void select(Selectable value) throws SelectionFailException {
+        if(this.value != null) {
+            this.lastSelection = this.value;
+        }
+        value.onSelect(player);
+        this.value = value;
+    }
+
+    public void unselect(boolean resumeLastSelection) throws SelectionFailException {
+        Selectable oldLastSelection = lastSelection;
+        if(value != null) {
+            this.value.onUnselect(player);
+            this.lastSelection = this.value;
+        }
+        if(resumeLastSelection) {
+            if(oldLastSelection != null) {
+                oldLastSelection.onSelect(player);
+            }
+            this.value = oldLastSelection;
+        }
+        else {
+            this.value = null;
+        }
+    }
+
+    public Player getPlayer() {
+        return player;
     }
 
     @Nullable
-    public Actor<?> getSelection() {
-        return selectedActor;
+    public Selectable getSelection() {
+        return this.value;
     }
 
-    public void unselect() {
-        selectedActor = null;
-        selectedPath = null;
-    }
-
-    public Mode getMode() {
-        return mode;
-    }
-
-    public void setMode(final Mode mode) {
-        this.mode = mode;
-    }
-
-    public void selectPath(final PathFactory.Type<?> type) {
-        this.selectedPath = type;
-    }
-
-    @Nullable
-    public PathFactory.Type<?> getSelectedPath() {
-        return selectedPath;
-    }
-
-    public enum Mode {
-        ACTOR,
-        PATH
-    }
 }

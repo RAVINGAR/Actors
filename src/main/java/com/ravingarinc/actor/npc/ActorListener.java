@@ -16,6 +16,7 @@ import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
@@ -78,9 +79,10 @@ public class ActorListener extends ModuleListener {
 
                     scheduler.runTaskAsynchronously(plugin, () -> {
                         for (final int id : list) {
-                            I.log(Level.WARNING, "Actor Destroy Packet!");
+
                             final Actor<?> actor = actorManager.getActor(id);
                             if (actor != null) {
+                                I.log(Level.WARNING, "Actor Destroy Packet!");
                                 actorManager.queue(() -> actor.removeViewer(player));
                             }
                         }
@@ -111,7 +113,7 @@ public class ActorListener extends ModuleListener {
         //        actor.getSpawnLocation().getWorldName().equalsIgnoreCase(player.getWorld().getName()));
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onEntityDamage(final EntityDamageEvent event) {
         // handle on actor damage
         final Actor<?> actor = actorManager.getActor(event.getEntity().getEntityId());

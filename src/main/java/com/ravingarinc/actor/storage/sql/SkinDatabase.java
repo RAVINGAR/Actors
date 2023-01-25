@@ -25,13 +25,13 @@ public class SkinDatabase extends Database {
     public void load() throws ModuleLoadException {
         super.load();
         client = plugin.getModule(SkinClient.class);
-        queueFromSync(this::loadAllSkins);
+        queue(this::loadAllSkins);
     }
 
     @Override
     public void cancel() {
+        saveAllSkins();
         super.cancel();
-        client.getSkins().forEach(this::saveSkin);
     }
 
     public void loadAllSkins() {

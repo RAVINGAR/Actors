@@ -16,8 +16,7 @@ import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.npc.type.PlayerActor;
-import com.ravingarinc.actor.skin.ActorSkin;
+import com.ravingarinc.actor.pathing.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import org.bukkit.entity.Player;
@@ -29,11 +28,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.DelayQueue;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -45,12 +41,14 @@ import java.util.stream.Collectors;
 public class ActorManager extends Module {
 
     private final BiMap<Integer, UUID, Actor<?>> cachedActors;
-    private BlockingRunner<FutureTask<?>> runner;
+    private BlockingRunner<FutureTask<Void>> runner;
     private BlockingRunner<DelayedFutureTask> delayedRunner;
     private SkinClient client;
     private ProtocolManager manager;
 
     private ActorDatabase database;
+
+    private PathingManager pathingManager;
 
     /**
      * The constructor for a Module, should only ever be called by {@link Module#initialise(RavinPlugin, Class)}.
@@ -77,6 +75,7 @@ public class ActorManager extends Module {
         client = plugin.getModule(SkinClient.class);
         database = plugin.getModule(ActorDatabase.class);
         manager = ProtocolLibrary.getProtocolManager();
+        pathingManager = plugin.getModule(PathingManager.class);
 
         runner = new BlockingRunner<>(new LinkedBlockingQueue<>());
         runner.runTaskAsynchronously(plugin);
@@ -87,8 +86,13 @@ public class ActorManager extends Module {
 
     @Override
     public void cancel() {
-        delayedRunner.cancel();
-        runner.cancel();
+        DelayedFutureTask delayFuture = new DelayedFutureTask(delayedRunner.getCancelTask(), 0);
+        delayedRunner.queue(delayFuture);
+        AsyncHandler.waitForFuture(delayFuture);
+
+        FutureTask<Void> future = new FutureTask<>(runner.getCancelTask(), null);
+        runner.queue(future);
+        AsyncHandler.waitForFuture(future);
 
         cachedActors.values().forEach(actor -> actor.getEntity().remove());
         cachedActors.clear();
@@ -103,6 +107,7 @@ public class ActorManager extends Module {
     public void createActor(final String type, final UUID uuid, final Vector3 location, final Argument[] args) {
         ActorFactory.build(type, uuid, location, args).ifPresent(actor -> {
             actor.create(this);
+            // todo load pathes into pathing manager
             saveLater(actor);
         });
     }
@@ -198,57 +203,16 @@ public class ActorManager extends Module {
     }
 
     /**
-     * Process a request to change an actor's skin. The actor must be a player
-     *
-     * @param actor The actor
-     * @param skin  The skin to apply
-     */
-    @Sync.AsyncOnly
-    public void processActorSkinChange(final PlayerActor actor, final ActorSkin skin) {
-        final FutureTask<?> future = queue(() -> client.unlinkActorAll(actor));
-        AsyncHandler.runAsynchronously(() -> {
-            skin.linkActor(actor);
-            try {
-                future.get(1000, TimeUnit.MILLISECONDS);
-                updateActor(actor);
-            } catch (ExecutionException | InterruptedException e) {
-                I.log(Level.WARNING, "Encountered exception on ActorSkinChange request!", e);
-            } catch (final TimeoutException e) {
-                I.log(Level.WARNING, "ActorSkinChange request timed out!", e);
-            }
-        });
-    }
-
-    /**
-     * Queue an actor related task on an asynchronous runnable. This will be run as async.
-     *
-     * @param runnable The runnable
-     */
-    @Async.Schedule
-    public void queueAsync(final Runnable runnable) {
-        AsyncHandler.runAsynchronously(() -> queue(runnable));
-    }
-
-    /**
-     * Queue an actor related task on an asynchronous runnable. This is run on the same thread that called it.
-     *
-     * @param result The expected result
-     */
-    public <T> FutureTask<T> queue(final T result, final Runnable runnable) {
-        final FutureTask<T> future = new FutureTask<>(runnable, result);
-        this.runner.queue(future);
-        return future;
-    }
-
-    /**
      * Queues a runnable on an asynchronous runner and returns a future representing the completion state of the
      * runnable
      *
      * @param runnable The runnable
      * @return The future
      */
-    public FutureTask<?> queue(final Runnable runnable) {
-        return queue(true, runnable);
+    public FutureTask<Void> queue(final Runnable runnable) {
+        final FutureTask<Void> future = new FutureTask<>(runnable, null);
+        this.runner.queue(future);
+        return future;
     }
 
     /**
@@ -258,13 +222,9 @@ public class ActorManager extends Module {
      * @param delay    The delay in ticks
      * @return The future task
      */
-    public FutureTask<Object> queueLater(final Runnable runnable, final long delay) {
-        return queueLater(runnable, true, delay);
-    }
-
-    public FutureTask<Object> queueLater(final Runnable runnable, final Object result, final long delay) {
-        final FutureTask<Object> future = new FutureTask<>(runnable, result);
-        delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), result, delay * 1000 / 20));
+    public FutureTask<Void> queueLater(final Runnable runnable, final long delay) {
+        final FutureTask<Void> future = new FutureTask<>(runnable, null);
+        delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), delay * 1000 / 20));
         return future;
     }
 }
