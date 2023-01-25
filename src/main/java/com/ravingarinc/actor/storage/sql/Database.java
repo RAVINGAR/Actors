@@ -29,7 +29,7 @@ public abstract class Database extends Module {
     protected final String url;
     protected final BukkitScheduler scheduler;
     private final String createTable;
-    protected BlockingRunner<FutureTask<?>> databaseRunner;
+    protected BlockingRunner<FutureTask<Void>> databaseRunner;
 
     @SafeVarargs
     public Database(final String name, final String createTable, final Class<? extends Database> identifier, final RavinPlugin plugin, final Class<? extends Module>... dependsOn) {
@@ -64,8 +64,8 @@ public abstract class Database extends Module {
         AsyncHandler.waitForFuture(queue(databaseRunner.getCancelTask()));
     }
 
-    public FutureTask<?> queue(final Runnable runnable) {
-        final FutureTask<?> task = new FutureTask<>(runnable, true);
+    public FutureTask<Void> queue(final Runnable runnable) {
+        final FutureTask<Void> task = new FutureTask<>(runnable, null);
         databaseRunner.queue(task);
         return task;
     }

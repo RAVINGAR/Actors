@@ -23,7 +23,7 @@ import java.util.List;
 
 public class PathOption extends CommandOption {
     public PathOption(final CommandOption parent, final RavinPlugin plugin) {
-        super("paths", parent, null, "", 2, (sender, args) -> false);
+        super("paths", parent, "actors.paths", "", 2, (sender, args) -> false);
         SelectorManager selector = plugin.getModule(SelectorManager.class);
         PathingManager manager = plugin.getModule(PathingManager.class);
 
