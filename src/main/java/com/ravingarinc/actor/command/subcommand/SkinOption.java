@@ -32,7 +32,7 @@ public class SkinOption extends CommandOption {
                 return true;
             }
 
-            final String name = args.length > 3 ? args[3] : fileName.substring(0, fileName.indexOf("."));
+            final String name = args.length < 4 ? fileName.substring(0, fileName.indexOf(".")) : args[3];
             if (client.getSkin(name) == null) {
                 try {
                     client.uploadSkin(sender, new File(client.getSkinFolder(), fileName), name);
@@ -41,7 +41,7 @@ public class SkinOption extends CommandOption {
                     sender.sendMessage(ChatColor.RED + "Could not find image file called '" + fileName + '!');
                 }
             } else {
-                sender.sendMessage(ChatColor.RED + "A skin called '%s'" + name + "' already exists! " +
+                sender.sendMessage(ChatColor.RED + "A skin called '" + name + "' already exists! " +
                         "If you wish to update this skin with a new texture, please use /actors skin update <file> <name>");
             }
             return true;

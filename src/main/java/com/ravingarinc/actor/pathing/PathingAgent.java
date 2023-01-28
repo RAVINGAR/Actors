@@ -1,6 +1,9 @@
 package com.ravingarinc.actor.pathing;
 
+import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.pathing.type.Path;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -16,11 +19,16 @@ public class PathingAgent {
     private final List<Path> pathList;
     private final AtomicBoolean isMoving;
     private Path selectedPath;
+    private final PathingManager manager;
 
-    public PathingAgent() {
+    private final Actor<?> actor;
+
+    public PathingAgent(Actor<?> actor, PathingManager manager) {
         isMoving = new AtomicBoolean(false);
         pathList = new LinkedList<>();
         selectedPath = null;
+        this.manager = manager;
+        this.actor = actor;
     }
 
     public void addPath(final Path path) {
@@ -31,6 +39,15 @@ public class PathingAgent {
         return pathList.remove(index);
     }
 
+    public void removePath(final Path path) {
+        pathList.remove(path);
+    }
+
+    @NotNull
+    public Path getPath(final int index) {
+        return pathList.get(index);
+    }
+
     public int getAmountOfPaths() {
         return pathList.size();
     }
@@ -38,16 +55,11 @@ public class PathingAgent {
     /**
      * True if path was selected, or false if not
      */
-    public boolean trySelectPath(final int index) {
-        final Path path = pathList.get(index);
-        if (path == null) {
-            return false;
-        }
+    public void trySelectPath(final int index) {
         if (selectedPath != null) {
             selectedPath.reset();
         }
-        selectedPath = path;
-        return true;
+        selectedPath = pathList.get(index);
     }
 
     public void start() {
@@ -55,6 +67,21 @@ public class PathingAgent {
             throw new IllegalStateException("Cannot start() as no path is selected for Actor!");
         }
         this.isMoving.setRelease(true);
+
+        move();
+    }
+
+    public void move() {
+        long time = System.currentTimeMillis();
+        Vector3 current = selectedPath.current();
+        selectedPath.next();
+        Vector3 post = selectedPath.current();
+
+        double dX = post.x - current.x;
+        double dY = post.y - current.y;
+        double dZ = post.z - current.z;
+
+
     }
 
     public void stop() {
@@ -62,18 +89,16 @@ public class PathingAgent {
             throw new IllegalStateException("Cannot stop() as no path is selected for Actor!");
         }
         this.isMoving.setRelease(false);
+
+
     }
 
     public void reset() {
-        if (selectedPath == null) {
-            throw new IllegalStateException("Cannot reset() as no path is selected for Actor!");
-        }
+        stop();
         selectedPath.reset();
     }
 
     public boolean isMoving() {
         return isMoving.getAcquire();
     }
-
-
 }

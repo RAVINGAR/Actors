@@ -14,7 +14,6 @@ import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.jetbrains.annotations.Async;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,31 +42,35 @@ public class ActorDatabase extends Database {
     public void load() throws ModuleLoadException {
         super.load();
         actorManager = plugin.getModule(ActorManager.class);
-        queueFromSync(this::loadAllActors);
+        loadAllActors();
     }
 
     @Override
     public void cancel() {
-        super.cancel();
         unloadedActors.clear();
-        actorManager.getActors().forEach(this::saveActor);
+        saveAllActors();
+        super.cancel();
     }
 
     @Sync.AsyncOnly
     public void loadAllActors() {
-        query(Actors.selectAll, (result) -> {
+        queue(() -> query(Actors.selectAll, (result) -> {
             try {
                 while (result.next()) {
-                    loadActor(result);
+                    try {
+                        loadActor(result);
+                    } catch(AsynchronousException e) {
+                        I.log(Level.SEVERE, "Encountered issue querying database!", e);
+                    }
                 }
-            } catch (final SQLException | AsynchronousException e) {
+            } catch (final SQLException e) {
                 I.log(Level.SEVERE, "Encountered issue querying database!", e);
             }
             if (unloadedActors.size() > 0) {
                 I.log(Level.WARNING, "Some actors could not be loaded. If you have recently changed world name and wish to migrate these unloaded actors, please type /actors migrate world %s <new-world-name> and then reload the plugin!");
             }
             return null;
-        });
+        }));
     }
 
     @Sync.AsyncOnly
@@ -80,7 +83,7 @@ public class ActorDatabase extends Database {
         final String worldName = result.getString(6);
         final String arguments = result.getString(7);
 
-        final World world = AsyncHandler.executeBlockingSyncComputation(() -> Bukkit.getWorld(worldName));
+        final World world = AsyncHandler.executeBlockingSyncComputation(() -> Bukkit.getWorld(worldName), 2000);
         if (world == null) {
             I.log(Level.WARNING, "Actor '%s' - Cannot load as world named '%s' does not exist.", uuid.toString(), worldName);
             addUnloadedActor(uuid, type, x, y, z, worldName, arguments);
@@ -110,7 +113,6 @@ public class ActorDatabase extends Database {
         // todo
     }
 
-    @Async.Schedule
     private void saveAllActors() {
         actorManager.getActors().forEach(actor -> queue(() -> saveActor(actor)));
     }

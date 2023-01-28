@@ -40,14 +40,14 @@ public class ActorFactory {
         return actor;
     });
 
-    private static final Map<String, Type<?>> actorTypes = new LinkedHashMap<>();
+    private static final Map<String, Type<?>> ACTOR_TYPES = new LinkedHashMap<>();
 
     static {
-        actorTypes.put(PLAYER.getKey(), PLAYER);
+        ACTOR_TYPES.put(PLAYER.getKey(), PLAYER);
     }
 
     public static List<String> getTypes() {
-        return new ArrayList<>(actorTypes.keySet());
+        return new ArrayList<>(ACTOR_TYPES.keySet());
     }
 
     protected static <T extends Actor<?>> Optional<T> build(final Type<T> type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
@@ -70,7 +70,7 @@ public class ActorFactory {
      * @return An optional which may or may not contain the given actor.
      */
     protected static Optional<? extends Actor<?>> build(final String type, final UUID uuid, final Vector3 location, final Argument[] arguments) {
-        final Type<?> actorType = actorTypes.get(type.toLowerCase());
+        final Type<?> actorType = ACTOR_TYPES.get(type.toLowerCase());
         if (actorType == null) {
             return Optional.empty();
         }

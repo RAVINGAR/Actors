@@ -60,7 +60,7 @@ public class ActorSkin {
     /**
      * Updates an internal value and returns true if the value was changed, or null if it was not.
      */
-    @Contract(value = "null -> false")
+    @Contract("null -> false")
     public boolean updateName(final String name) {
         if (name == null || name.equalsIgnoreCase(this.name)) {
             return false;

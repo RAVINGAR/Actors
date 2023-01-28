@@ -5,19 +5,19 @@ import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.command.subcommand.NPCOption;
 import com.ravingarinc.actor.command.subcommand.PathOption;
 import com.ravingarinc.actor.command.subcommand.SkinOption;
-import com.ravingarinc.actor.npc.selector.ActorSelector;
+import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 public class ActorsCommand extends BaseCommand {
 
-    private final ActorSelector selector;
+    private final SelectorManager selector;
 
     public ActorsCommand(final RavinPlugin plugin) {
         super("actor", null);
 
-        selector = plugin.getModule(ActorSelector.class);
+        selector = plugin.getModule(SelectorManager.class);
 
         // The arguments count basically after the initial identifier
         // aka /actors reload will be considered 2 arguments, args[0] will return reload, meanwhile [1] will be whatever
@@ -65,12 +65,10 @@ public class ActorsCommand extends BaseCommand {
             return true;
         });
 
-        addOption("npc", new NPCOption(this, plugin));
+        new NPCOption(this, plugin).register();
+        new SkinOption(this, plugin.getModule(SkinClient.class)).register();
+        new PathOption(this, plugin).register();
 
-        addOption("skin", new SkinOption(this, plugin.getModule(SkinClient.class)));
-
-        addOption("paths", new PathOption(this, plugin.getModule(ActorSelector.class)));
-
-        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
+        addHelpOption(ChatColor.AQUA, ChatColor.DARK_AQUA);
     }
 }

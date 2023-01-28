@@ -5,9 +5,11 @@ import com.ravingarinc.actor.api.BiMap;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.async.AsynchronousException;
 import com.ravingarinc.actor.api.async.BlockingRunner;
 import com.ravingarinc.actor.api.async.CompletableRunnable;
 import com.ravingarinc.actor.api.async.Sync;
+import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.storage.ConfigManager;
@@ -34,6 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 public class SkinClient extends Module {
     private final MineskinClient skinClient;
@@ -216,23 +219,28 @@ public class SkinClient extends Module {
 
     @Sync.AsyncOnly
     public void queue(final ActorSkin skin, final CompletableFuture<Skin> future, final CommandSender sender) {
-        this.runner.queue(new CompletableRunnable<>(future, (result) -> {
-            if (result == null) {
-                skin.discard(actorManager);
-                cachedSkins.remove(skin.getUUID());
-                if (sender != null) {
-                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + skin.getName() + "' as the request timed out! Try again later!"));
-                }
-            } else {
-                skin.updateTexture(result.data.texture.value, result.data.texture.signature);
-                skin.apply(actorManager);
-                database.saveSkin(skin);
+        try {
+            this.runner.queue(new CompletableRunnable<>(future, (result) -> {
+                if (result == null) {
+                    skin.discard(actorManager);
+                    cachedSkins.remove(skin.getUUID());
+                    if (sender != null) {
+                        AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.RED + "Could not upload the skin named '" + skin.getName() + "' as the request timed out! Try again later!"));
+                    }
+                } else {
+                    skin.updateTexture(result.data.texture.value, result.data.texture.signature);
+                    skin.apply(actorManager);
+                    database.saveSkin(skin);
 
-                if (sender != null) {
-                    AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + skin.getName() + "'!"));
+                    if (sender != null) {
+                        AsyncHandler.runSynchronously(() -> sender.sendMessage(ChatColor.GREEN + "Successfully uploaded skin named '" + skin.getName() + "'!"));
+                    }
                 }
-            }
-        }, 15000L));
+            }, 15000L));
+        }
+        catch(AsynchronousException e) {
+            I.log(Level.SEVERE, e.getMessage(), e);
+        }
     }
 
 
@@ -252,5 +260,17 @@ public class SkinClient extends Module {
     @Override
     public void cancel() {
         runner.cancel(true);
+        try {
+            CompletableRunnable<Skin> runnable = new CompletableRunnable<>(
+                    CompletableFuture.completedFuture(null),
+                    (v) -> runner.getCancelTask().run());
+            runner.queue(runnable);
+            AsyncHandler.waitForFuture(runnable);
+        }
+        catch(AsynchronousException e) {
+            I.log(Level.SEVERE, "Could not shut down SkinClient module!", e);
+        }
+
+        cachedSkins.clear();
     }
 }

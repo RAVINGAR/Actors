@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -38,14 +39,21 @@ public class AsyncHandler {
     @Async.Execute
     @Blocking
     @Nullable
-    public static <V> V executeBlockingSyncComputation(final Callable<V> callable) throws AsynchronousException {
+    public static <V> V executeBlockingSyncComputation(final Callable<V> callable, long timeout) throws AsynchronousException {
         final FutureTask<V> task = new FutureTask<>(callable);
         scheduler.scheduleSyncDelayedTask(plugin, task);
         try {
-            return task.get(500, TimeUnit.MILLISECONDS);
+            return task.get(timeout, TimeUnit.MILLISECONDS);
         } catch (ExecutionException | InterruptedException | TimeoutException e) {
             throw new AsynchronousException("Encountered attempting to get value from sync execution!", e);
         }
+    }
+
+    @Async.Execute
+    @Blocking
+    @Nullable
+    public static <V> V executeBlockingSyncComputation(final Callable<V> callable) throws AsynchronousException {
+        return executeBlockingSyncComputation(callable, 500);
     }
 
     /**
@@ -66,6 +74,15 @@ public class AsyncHandler {
                 I.log(Level.SEVERE, "Encountered issue running async computation!", e);
             }
         });
+    }
+
+    public static void waitForFuture(final Future<?> future) {
+        try {
+            future.get(1000, TimeUnit.MILLISECONDS);
+        }
+        catch(ExecutionException | InterruptedException | TimeoutException e) {
+            I.log(Level.SEVERE, "Encountered exception waiting for future!", e);
+        }
     }
 
     /**

@@ -12,14 +12,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
-    private final Map<K1, V> firstMap;
-    private final Map<K2, V> secondMap;
+public class BiMap<K, B, V> implements Map<Pair<K, B>, V> {
+    private final Map<K, V> firstMap;
+    private final Map<B, V> secondMap;
 
-    private final Class<K1> firstKeyType;
-    private final Class<K2> secondKeyType;
+    private final Class<K> firstKeyType;
+    private final Class<B> secondKeyType;
 
-    public BiMap(final Class<K1> firstKeyType, final Class<K2> secondKeyType) {
+    public BiMap(final Class<K> firstKeyType, final Class<B> secondKeyType) {
         this.firstMap = new ConcurrentHashMap<>();
         this.secondMap = new ConcurrentHashMap<>();
         this.firstKeyType = firstKeyType;
@@ -67,7 +67,7 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
     }
 
     @Nullable
-    public V put(@NotNull final K1 firstKey, @NotNull final K2 secondKey, final V value) {
+    public V put(@NotNull final K firstKey, @NotNull final B secondKey, final V value) {
         firstMap.put(firstKey, value);
         secondMap.put(secondKey, value);
         return value;
@@ -76,12 +76,12 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
     @Nullable
     @Override
     @Deprecated
-    public V put(final Pair<K1, K2> key, final V value) {
+    public V put(final Pair<K, B> key, final V value) {
         return put(key.getLeft(), key.getRight(), value);
     }
 
     @Nullable
-    public V removeBoth(final K1 firstKey, final K2 secondKey) {
+    public V removeBoth(final K firstKey, final B secondKey) {
         final V v1 = firstMap.remove(firstKey);
         final V v2 = secondMap.remove(secondKey);
         if (v1 == null || v2 == null) {
@@ -99,7 +99,7 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
     public V remove(final Object key) {
         if (key instanceof Pair<?, ?> pair) {
             if (pair.getLeft().getClass().equals(firstKeyType) && pair.getRight().getClass().equals(secondKeyType)) {
-                return removeBoth((K1) pair.getLeft(), (K2) pair.getRight());
+                return removeBoth((K) pair.getLeft(), (B) pair.getRight());
             }
         }
         throw new ClassCastException("Key was of inappropriate type!");
@@ -107,7 +107,7 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
 
     @Override
     @Deprecated
-    public void putAll(@NotNull final Map<? extends Pair<K1, K2>, ? extends V> m) {
+    public void putAll(@NotNull final Map<? extends Pair<K, B>, ? extends V> m) {
         m.forEach((pair, value) -> {
             firstMap.put(pair.getLeft(), value);
             secondMap.put(pair.getRight(), value);
@@ -122,11 +122,11 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
 
     @NotNull
     @Override
-    public Set<Pair<K1, K2>> keySet() {
-        final List<K1> firstKeys = new ArrayList<>(firstMap.keySet());
-        final List<K2> secondKeys = new ArrayList<>(secondMap.keySet());
+    public Set<Pair<K, B>> keySet() {
+        final List<K> firstKeys = new ArrayList<>(firstMap.keySet());
+        final List<B> secondKeys = new ArrayList<>(secondMap.keySet());
 
-        final Set<Pair<K1, K2>> set = new HashSet<>();
+        final Set<Pair<K, B>> set = new HashSet<>();
         for (int i = 0; i < size(); i++) {
             set.add(new Pair<>(firstKeys.get(i), secondKeys.get(i)));
         }
@@ -138,7 +138,7 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
      *
      * @return A set of the first key types
      */
-    public Set<K1> firstKeys() {
+    public Set<K> firstKeys() {
         return firstMap.keySet();
     }
 
@@ -147,7 +147,7 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
      *
      * @return A set of the first key types
      */
-    public Set<K2> secondKeys() {
+    public Set<B> secondKeys() {
         return secondMap.keySet();
     }
 
@@ -159,13 +159,13 @@ public class BiMap<K1, K2, V> implements Map<Pair<K1, K2>, V> {
 
     @NotNull
     @Override
-    public Set<Entry<Pair<K1, K2>, V>> entrySet() {
-        final List<Entry<K1, V>> firstKeyValues = new ArrayList<>(firstMap.entrySet());
-        final List<K2> secondKeys = new ArrayList<>(secondMap.keySet());
+    public Set<Entry<Pair<K, B>, V>> entrySet() {
+        final List<Entry<K, V>> firstKeyValues = new ArrayList<>(firstMap.entrySet());
+        final List<B> secondKeys = new ArrayList<>(secondMap.keySet());
 
-        final Set<Entry<Pair<K1, K2>, V>> set = new HashSet<>();
+        final Set<Entry<Pair<K, B>, V>> set = new HashSet<>();
         for (int i = 0; i < size(); i++) {
-            final Entry<K1, V> entry = firstKeyValues.get(i);
+            final Entry<K, V> entry = firstKeyValues.get(i);
             set.add(new BiEntry<>(entry.getKey(), secondKeys.get(i), entry.getValue()));
         }
         return set;

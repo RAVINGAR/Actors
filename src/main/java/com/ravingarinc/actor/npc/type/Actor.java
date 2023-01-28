@@ -12,6 +12,8 @@ import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.actor.npc.selector.Selectable;
+import com.ravingarinc.actor.npc.selector.SelectionFailException;
 import com.ravingarinc.actor.pathing.PathingAgent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -29,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 
-public abstract class Actor<T extends Entity> {
+public abstract class Actor<T extends Entity> implements Selectable {
 
     /**
      * The internal UUID used during loading and saving of actors.
@@ -61,12 +63,7 @@ public abstract class Actor<T extends Entity> {
         this.viewers = new ConcurrentHashMap<>();
         this.appliedArguments = new HashMap<>();
         this.isInvuln = new AtomicBoolean(true);
-        this.pathingAgent = new PathingAgent();
         this.setInvuln(true);
-    }
-
-    public PathingAgent getPathingAgent() {
-        return pathingAgent;
     }
 
     public boolean isInvuln() {
@@ -220,8 +217,13 @@ public abstract class Actor<T extends Entity> {
         } catch (final AsynchronousException e) {
             I.log(Level.SEVERE, "Encountered issues applying synchronised updates to actor!", e);
         }
-
     }
+
+    @Override
+    public void onSelect(Player selector) throws SelectionFailException {}
+
+    @Override
+    public void onUnselect(Player selector) throws SelectionFailException {}
 
     protected static class Update {
         public final static String NAME = "name_update";

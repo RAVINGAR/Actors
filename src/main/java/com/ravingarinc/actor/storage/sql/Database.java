@@ -3,11 +3,10 @@ package com.ravingarinc.actor.storage.sql;
 import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.Module;
 import com.ravingarinc.actor.api.ModuleLoadException;
+import com.ravingarinc.actor.api.async.AsyncHandler;
 import com.ravingarinc.actor.api.async.BlockingRunner;
-import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import org.bukkit.scheduler.BukkitScheduler;
-import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -30,7 +29,7 @@ public abstract class Database extends Module {
     protected final String url;
     protected final BukkitScheduler scheduler;
     private final String createTable;
-    protected BlockingRunner<FutureTask<?>> databaseRunner;
+    protected BlockingRunner<FutureTask<Void>> databaseRunner;
 
     @SafeVarargs
     public Database(final String name, final String createTable, final Class<? extends Database> identifier, final RavinPlugin plugin, final Class<? extends Module>... dependsOn) {
@@ -62,20 +61,12 @@ public abstract class Database extends Module {
 
     @Override
     public void cancel() {
-        databaseRunner.cancel();
+        AsyncHandler.waitForFuture(queue(databaseRunner.getCancelTask()));
     }
 
-    @Sync.AsyncOnly
-    public FutureTask<?> queue(final Runnable runnable) {
-        final FutureTask<?> task = new FutureTask<>(runnable, true);
+    public FutureTask<Void> queue(final Runnable runnable) {
+        final FutureTask<Void> task = new FutureTask<>(runnable, null);
         databaseRunner.queue(task);
-        return task;
-    }
-
-    @Async.Schedule
-    public FutureTask<?> queueFromSync(final Runnable runnable) {
-        final FutureTask<?> task = new FutureTask<>(runnable, true);
-        scheduler.runTaskAsynchronously(plugin, () -> databaseRunner.queue(task));
         return task;
     }
 
