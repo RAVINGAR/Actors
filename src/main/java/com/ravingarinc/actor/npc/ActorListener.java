@@ -19,7 +19,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.HashSet;
@@ -78,10 +77,11 @@ public class ActorListener extends ModuleListener {
 
                     scheduler.runTaskAsynchronously(plugin, () -> {
                         for (final int id : list) {
-                            I.log(Level.WARNING, "Actor Destroy Packet!");
                             final Actor<?> actor = actorManager.getActor(id);
                             if (actor != null) {
+                                I.log(Level.WARNING, "Actor Destroy Packet!");
                                 actorManager.queue(() -> actor.removeViewer(player));
+                                break;
                             }
                         }
                     });
@@ -102,13 +102,6 @@ public class ActorListener extends ModuleListener {
     @EventHandler
     public void onEntityTarget(final EntityTargetEvent event) {
 
-    }
-
-    @EventHandler
-    public void onPlayerJoin(final PlayerJoinEvent event) {
-        final Player player = event.getPlayer();
-        //actorManager.filterActors(actor ->
-        //        actor.getSpawnLocation().getWorldName().equalsIgnoreCase(player.getWorld().getName()));
     }
 
     @EventHandler(ignoreCancelled = true)

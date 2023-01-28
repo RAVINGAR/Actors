@@ -35,7 +35,7 @@ public class NPCOption extends CommandOption {
     private final ActorSelector selector;
 
     public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
-        super(parent, 2, (sender, args) -> false);
+        super("npc", parent, "actors.npc", "", 2, (sender, args) -> false);
         this.manager = plugin.getModule(ActorManager.class);
         this.client = plugin.getModule(SkinClient.class);
         this.selector = plugin.getModule(ActorSelector.class);
@@ -175,5 +175,7 @@ public class NPCOption extends CommandOption {
                 return Registry.getArgumentTypes(Registry.ACTOR_ARGS).keySet().stream().toList();
             }
         });
+
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

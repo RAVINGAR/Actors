@@ -15,20 +15,20 @@ public class ActorsCommand extends BaseCommand {
     private final ActorSelector selector;
 
     public ActorsCommand(final RavinPlugin plugin) {
-        super("actor");
+        super("actor", null);
 
         selector = plugin.getModule(ActorSelector.class);
 
         // The arguments count basically after the initial identifier
         // aka /actors reload will be considered 2 arguments, args[0] will return reload, meanwhile [1] will be whatever
         // the user is currently typing.
-        addOption("reload", 1, (sender, args) -> {
+        addOption("reload", "actors.reload", "", 1, (sender, args) -> {
             plugin.reload();
             sender.sendMessage(ChatUtil.PREFIX + "Plugin has been reloaded!");
             return true;
         });
 
-        addOption("selector", 1, (sender, args) -> {
+        addOption("selector", "actors.selector", "", 1, (sender, args) -> {
             if (sender instanceof Player player) {
                 if (selector.toggleSelecting(player)) {
                     sender.sendMessage(ChatUtil.PREFIX + ChatColor.DARK_AQUA + "Selector - ON " + ChatColor.GRAY + "| You can now LEFT-CLICK any Actors to select them!");
@@ -71,9 +71,6 @@ public class ActorsCommand extends BaseCommand {
 
         addOption("paths", new PathOption(this, plugin.getModule(ActorSelector.class)));
 
-        addOption("?", 2, (sender, args) -> {
-            // todo
-            return false;
-        });
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

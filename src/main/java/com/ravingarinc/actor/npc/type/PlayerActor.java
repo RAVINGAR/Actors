@@ -30,8 +30,10 @@ public class PlayerActor extends LivingActor {
     @Override
     public void update(final ActorManager manager) {
         final Player[] viewers = getViewers().toArray(new Player[0]);
+        manager.queue(() -> manager.sendPacket(viewers, getRemovePacket(manager)));
         manager.queue(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager)));
-        manager.queueLater(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 5L);
+        manager.queue(() -> manager.sendPacket(viewers, getSpawnPacket(getLocation(), manager)));
+        manager.queueLater(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 10L);
     }
 
     @Override

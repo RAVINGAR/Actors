@@ -82,6 +82,10 @@ public abstract class Actor<T extends Entity> {
         return type;
     }
 
+    public Vector3 getLocation() {
+        return spawnLocation;
+    }
+
     public void applyArguments(final Argument... arguments) {
         for (final Argument argument : arguments) {
             final String arg = argument.consume(this);

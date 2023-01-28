@@ -19,7 +19,7 @@ import java.util.List;
 
 public class PathOption extends CommandOption {
     public PathOption(final CommandOption parent, final ActorSelector selector) {
-        super(parent, 2, (sender, args) -> false);
+        super("path", parent, "actors.path", "", 2, (sender, args) -> false);
 
         addOption("create", 3, (sender, args) -> {
             if (sender instanceof Player player) {
@@ -109,5 +109,7 @@ public class PathOption extends CommandOption {
             }
             return new ArrayList<>();
         });
+
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

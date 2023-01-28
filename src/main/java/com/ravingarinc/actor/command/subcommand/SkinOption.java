@@ -12,7 +12,7 @@ import java.util.List;
 
 public class SkinOption extends CommandOption {
     public SkinOption(final CommandOption parent, final SkinClient client) {
-        super(parent, 2, (player, args) -> false);
+        super("skin", parent, "actors.skin", "", 2, (player, args) -> false);
 
         addOption("upload", 3, (sender, args) -> {
             if (args.length < 3) {
@@ -91,11 +91,7 @@ public class SkinOption extends CommandOption {
             }
         });
 
-        addOption("save", 3, (sender, args) -> {
-            if (args.length < 4) {
-                sender.sendMessage(ChatColor.RED + "Incorrect usage - /actors skin save <url> <name>");
-                return true;
-            }
+        addOption("save", ChatColor.AQUA + "<url> <name>" + ChatColor.GRAY + "- Download a skin from a url and save it.", 4, (sender, args) -> {
             client.saveSkin(sender, args[2], args[3]);
             sender.sendMessage(ChatColor.GRAY + "The url " + args[2] + " is being saved to id '" + args[3] + "'");
             return true;
@@ -107,5 +103,7 @@ public class SkinOption extends CommandOption {
             client.getSkinNames().forEach(skin -> sender.sendMessage(ChatColor.GRAY + "- " + skin));
             return true;
         }).buildTabCompletions((sender, args) -> new ArrayList<>());
+
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }
