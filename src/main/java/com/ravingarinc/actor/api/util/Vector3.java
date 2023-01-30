@@ -14,12 +14,10 @@ import javax.vecmath.Vector3d;
  */
 @ThreadSafe
 public class Vector3 extends Vector3d {
-    private final float yaw;
-    private final float pitch;
+    public final float yaw;
+    public final float pitch;
 
     private final World world;
-
-    private final String worldName;
 
     @Sync.SyncOnly
     public Vector3(final Location location) {
@@ -43,12 +41,11 @@ public class Vector3 extends Vector3d {
         this.yaw = yaw;
         this.pitch = pitch;
         this.world = world;
-        this.worldName = world == null ? null : world.getName();
     }
 
     @Nullable
-    public String getWorldName() {
-        return worldName;
+    public World getWorld() {
+        return world;
     }
 
     /**
@@ -102,5 +99,9 @@ public class Vector3 extends Vector3d {
     @Override
     public String toString() {
         return "x = " + x + ", y = " + y + ", z = " + z;
+    }
+
+    public Vector3 copy() {
+        return new Vector3(x, y, z, yaw, pitch, world);
     }
 }

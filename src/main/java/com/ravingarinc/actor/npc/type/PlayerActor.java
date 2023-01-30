@@ -37,12 +37,12 @@ public class PlayerActor extends LivingActor {
     }
 
     @Override
-    public void spawn(final ActorManager manager, final Vector3 location, final Player viewer) {
+    public void spawn(final ActorManager manager, final Player viewer) {
         manager.queue(() -> {
             addViewer(viewer);
             manager.sendPackets(viewer,
                     getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager),
-                    getSpawnPacket(location, manager));
+                    getSpawnPacket(getLocation(), manager));
         });
         manager.queueLater(() -> manager.sendPacket(viewer, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 10L);
 

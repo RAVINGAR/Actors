@@ -14,7 +14,6 @@ import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.selector.Selectable;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
-import com.ravingarinc.actor.pathing.PathingAgent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Blocking;
@@ -50,7 +49,7 @@ public abstract class Actor<T extends Entity> implements Selectable {
     protected final AtomicBoolean isInvuln;
     protected Vector3 spawnLocation;
 
-    protected PathingAgent pathingAgent;
+    protected AtomicReference<Vector3> currentLocation;
 
     public Actor(final ActorFactory.Type<?> type, final UUID uuid, final T entity, final Vector3 spawnLocation) {
         this.syncUpdates = new ConcurrentKeyedQueue<>(ConcurrentKeyedQueue.Mode.IGNORE);
@@ -60,6 +59,7 @@ public abstract class Actor<T extends Entity> implements Selectable {
         this.entity = entity;
         this.id = entity.getEntityId();
         this.spawnLocation = spawnLocation;
+        this.currentLocation = new AtomicReference<>(spawnLocation);
         this.viewers = new ConcurrentHashMap<>();
         this.appliedArguments = new HashMap<>();
         this.isInvuln = new AtomicBoolean(true);
@@ -80,7 +80,11 @@ public abstract class Actor<T extends Entity> implements Selectable {
     }
 
     public Vector3 getLocation() {
-        return spawnLocation;
+        return currentLocation.getAcquire();
+    }
+
+    public void setLocation(final Vector3 location) {
+        this.currentLocation.setRelease(location);
     }
 
     public void applyArguments(final Argument... arguments) {
@@ -150,7 +154,7 @@ public abstract class Actor<T extends Entity> implements Selectable {
     /**
      * Show an actor after it comes into view
      */
-    public abstract void spawn(ActorManager actorManager, Vector3 location, Player viewer);
+    public abstract void spawn(ActorManager actorManager, Player viewer);
 
     /**
      * Spawn an actor for the first time
@@ -220,10 +224,12 @@ public abstract class Actor<T extends Entity> implements Selectable {
     }
 
     @Override
-    public void onSelect(Player selector) throws SelectionFailException {}
+    public void onSelect(final Player selector) throws SelectionFailException {
+    }
 
     @Override
-    public void onUnselect(Player selector) throws SelectionFailException {}
+    public void onUnselect(final Player selector) throws SelectionFailException {
+    }
 
     protected static class Update {
         public final static String NAME = "name_update";

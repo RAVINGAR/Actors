@@ -92,8 +92,8 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.register("copyToDev", Copy) {
     from shadowJar
-    //into project.layout.projectDirectory.dir("../../Desktop/Programming/Server/plugins")
-    into "E:/Documents/Workspace/Servers/1.18.2-TEST/plugins/"
+    into project.layout.projectDirectory.dir("../../Desktop/Programming/Server/plugins")
+    //into "E:/Documents/Workspace/Servers/1.18.2-TEST/plugins/"
 }
 
 assemble.finalizedBy copyToDev

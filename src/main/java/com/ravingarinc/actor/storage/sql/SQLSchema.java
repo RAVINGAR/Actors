@@ -77,4 +77,30 @@ public class SQLSchema {
                 ARGUMENTS + " = ? " +
                 "WHERE " + UUID + " = ?";
     }
+
+    public static class Paths {
+        public static final String PATHS = "paths";
+
+        public static final String selectAll = "SELECT * FROM " + PATHS;
+        public static final String UUID = "uuid_id";
+        public static final String TYPE = "type";
+        public static final String ARGUMENTS = "arguments";
+        public static final String createTable = "CREATE TABLE IF NOT EXISTS " + PATHS + " (" +
+                UUID + " TEXT PRIMARY KEY," +
+                TYPE + " TEXT NOT NULL," +
+                ARGUMENTS + " TEXT NOT NULL) WITHOUT ROWID;";
+        public static final String select = "SELECT " + TYPE + ", " + ARGUMENTS +
+                " FROM " + PATHS +
+                " WHERE " + UUID + " = ?";
+
+        public static final String insert = "INSERT INTO " + PATHS + "(" +
+                UUID + "," +
+                TYPE + "," +
+                ARGUMENTS + ") VALUES(?,?,?)";
+
+        public static final String update = "UPDATE " + PATHS + " SET " +
+                TYPE + " = ? , " +
+                ARGUMENTS + " = ? " +
+                "WHERE " + UUID + " = ?";
+    }
 }

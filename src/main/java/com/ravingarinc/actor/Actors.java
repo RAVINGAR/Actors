@@ -25,7 +25,7 @@ public final class Actors extends RavinPlugin {
         addModule(SkinDatabase.class);
         addModule(ActorDatabase.class);
 
-        addModule(SelectorManager.class);
+        addModule(SelectorManager.class); // this must be after everything so it cancels any tasks
     }
 
     @Override

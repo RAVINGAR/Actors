@@ -1,13 +1,11 @@
 package com.ravingarinc.actor.pathing;
 
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.pathing.type.Path;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Base class for actor related movement patterns. An actor always has a start location otherwise known as their
@@ -17,18 +15,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class PathingAgent {
     private final List<Path> pathList;
-    private final AtomicBoolean isMoving;
-    private Path selectedPath;
-    private final PathingManager manager;
-
     private final Actor<?> actor;
+    private Path selectedPath;
 
-    public PathingAgent(Actor<?> actor, PathingManager manager) {
-        isMoving = new AtomicBoolean(false);
+    public PathingAgent(final Actor<?> actor) {
         pathList = new LinkedList<>();
         selectedPath = null;
-        this.manager = manager;
         this.actor = actor;
+    }
+
+    public Actor<?> getActor() {
+        return actor;
     }
 
     public void addPath(final Path path) {
@@ -55,50 +52,24 @@ public class PathingAgent {
     /**
      * True if path was selected, or false if not
      */
-    public void trySelectPath(final int index) {
-        if (selectedPath != null) {
-            selectedPath.reset();
-        }
+    public void selectPath(final int index) {
         selectedPath = pathList.get(index);
     }
 
-    public void start() {
-        if (selectedPath == null) {
-            throw new IllegalStateException("Cannot start() as no path is selected for Actor!");
-        }
-        this.isMoving.setRelease(true);
-
-        move();
-    }
-
-    public void move() {
-        long time = System.currentTimeMillis();
-        Vector3 current = selectedPath.current();
-        selectedPath.next();
-        Vector3 post = selectedPath.current();
-
-        double dX = post.x - current.x;
-        double dY = post.y - current.y;
-        double dZ = post.z - current.z;
-
-
-    }
-
-    public void stop() {
-        if (selectedPath == null) {
-            throw new IllegalStateException("Cannot stop() as no path is selected for Actor!");
-        }
-        this.isMoving.setRelease(false);
-
-
-    }
-
     public void reset() {
-        stop();
+        selectedPath.current().resetIteration();
         selectedPath.reset();
     }
 
-    public boolean isMoving() {
-        return isMoving.getAcquire();
+    @NotNull
+    protected Path getSelectedPath() {
+        if (selectedPath == null) {
+            throw new IllegalStateException("Cannot get selected path as it was null!");
+        }
+        return selectedPath;
+    }
+
+    public boolean hasSelectedPath() {
+        return selectedPath != null;
     }
 }

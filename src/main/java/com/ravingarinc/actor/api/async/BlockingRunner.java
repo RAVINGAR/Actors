@@ -10,9 +10,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnable {
-    private final BlockingQueue<T> queue;
+    protected final BlockingQueue<T> queue;
 
-    private final AtomicBoolean cancelled;
+    protected final AtomicBoolean cancelled;
 
     public BlockingRunner(final BlockingQueue<T> queue) {
         this.queue = queue;
@@ -20,7 +20,7 @@ public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnab
     }
 
     public <V extends T> void queue(final V task) {
-        if(!this.cancelled.getAcquire()) {
+        if (!this.cancelled.getAcquire()) {
             this.queue.add(task);
         }
     }
@@ -30,7 +30,7 @@ public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnab
     }
 
     public void queueAll(final Collection<T> collection) {
-        if(!this.cancelled.getAcquire()) {
+        if (!this.cancelled.getAcquire()) {
             this.queue.addAll(collection);
         }
     }
@@ -39,10 +39,7 @@ public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnab
     public void run() {
         while (!isCancelled() && !cancelled.getAcquire()) {
             try {
-                T item = queue.take();
-                if(!item.isCancelled()) {
-                    item.run();
-                }
+                queue.take().run();
             } catch (final InterruptedException e) {
                 I.logIfDebug(() -> "BlockingRunner task was interrupted! This may be expected!", e);
             }
@@ -51,12 +48,13 @@ public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnab
 
     /**
      * It is expected that after {@link #cancel(boolean)} is called, that this is queued as the next task.
+     *
      * @return The cancel runnable
      */
     public synchronized Runnable getCancelTask() {
         return () -> {
             cancelled.setRelease(true);
-            if(!isCancelled()) {
+            if (!isCancelled()) {
                 super.cancel();
             }
         };
@@ -67,7 +65,7 @@ public class BlockingRunner<T extends Future<?> & Runnable> extends BukkitRunnab
         this.cancel(false);
     }
 
-    public synchronized void cancel(boolean mayInterruptIfRunning) throws IllegalStateException {
+    public synchronized void cancel(final boolean mayInterruptIfRunning) throws IllegalStateException {
         super.cancel();
         getRemaining().forEach(task -> task.cancel(mayInterruptIfRunning));
     }

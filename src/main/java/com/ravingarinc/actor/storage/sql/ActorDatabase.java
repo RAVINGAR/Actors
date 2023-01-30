@@ -59,7 +59,7 @@ public class ActorDatabase extends Database {
                 while (result.next()) {
                     try {
                         loadActor(result);
-                    } catch(AsynchronousException e) {
+                    } catch (final AsynchronousException e) {
                         I.log(Level.SEVERE, "Encountered issue querying database!", e);
                     }
                 }
@@ -149,7 +149,7 @@ public class ActorDatabase extends Database {
                 statement.setDouble(3, location.getX());
                 statement.setDouble(4, location.getY());
                 statement.setDouble(5, location.getZ());
-                statement.setString(6, location.getWorldName());
+                statement.setString(6, location.getWorld().getName());
                 final StringBuilder builder = new StringBuilder();
                 final Iterator<String> iterator = actor.getAppliedArguments().iterator();
                 while (iterator.hasNext()) {
@@ -173,7 +173,7 @@ public class ActorDatabase extends Database {
                 statement.setDouble(2, location.getX());
                 statement.setDouble(3, location.getY());
                 statement.setDouble(4, location.getZ());
-                statement.setString(5, location.getWorldName());
+                statement.setString(5, location.getWorld().getName());
                 final StringBuilder builder = new StringBuilder();
                 final Iterator<String> iterator = actor.getAppliedArguments().iterator();
                 while (iterator.hasNext()) {

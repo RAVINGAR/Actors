@@ -86,11 +86,11 @@ public class ActorManager extends Module {
 
     @Override
     public void cancel() {
-        DelayedFutureTask delayFuture = new DelayedFutureTask(delayedRunner.getCancelTask(), 0);
+        final DelayedFutureTask delayFuture = new DelayedFutureTask(delayedRunner.getCancelTask(), 0);
         delayedRunner.queue(delayFuture);
         AsyncHandler.waitForFuture(delayFuture);
 
-        FutureTask<Void> future = new FutureTask<>(runner.getCancelTask(), null);
+        final FutureTask<Void> future = new FutureTask<>(runner.getCancelTask(), null);
         runner.queue(future);
         AsyncHandler.waitForFuture(future);
 
@@ -126,12 +126,12 @@ public class ActorManager extends Module {
 
     @SuppressWarnings("all")
     public Actor<?> getActor(int id) {
-        return cachedActors.get(id);
+        return cachedActors.getFirst(id);
     }
 
     @SuppressWarnings("all")
     public Actor<?> getActor(UUID uuid) {
-        return cachedActors.get(uuid);
+        return cachedActors.getSecond(uuid);
     }
 
     /**

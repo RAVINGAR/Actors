@@ -53,6 +53,7 @@ public class BiMap<K, B, V> implements Map<Pair<K, B>, V> {
 
     @Override
     @Nullable
+    @Deprecated
     public V get(@NotNull final Object key) {
         if (key.getClass().equals(firstKeyType)) {
             return firstMap.get(key);
@@ -64,6 +65,14 @@ public class BiMap<K, B, V> implements Map<Pair<K, B>, V> {
             }
         }
         throw new ClassCastException("Key was of inappropriate type!");
+    }
+
+    public V getFirst(@NotNull final K key) {
+        return firstMap.get(key);
+    }
+
+    public V getSecond(@NotNull final B key) {
+        return secondMap.get(key);
     }
 
     @Nullable

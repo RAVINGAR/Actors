@@ -26,7 +26,7 @@ public class LivingActor extends Actor<LivingEntity> {
     }
 
     @Override
-    public void spawn(final ActorManager actorManager, final Vector3 location, final Player viewer) {
+    public void spawn(final ActorManager actorManager, final Player viewer) {
 
     }
 

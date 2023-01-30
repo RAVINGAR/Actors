@@ -1,11 +1,11 @@
 package com.ravingarinc.actor.pathing.type;
 
-import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.selector.Selectable;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
+import com.ravingarinc.actor.pathing.PathingManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -13,7 +13,6 @@ import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -21,54 +20,54 @@ import java.util.List;
 public class PathMaker implements Selectable {
 
     public static final String PATH_INDEX = "path_maker_index";
-
-    private Player player;
-    private World world;
-
     private final Path path;
     private final List<ArmorStand> displayedSelectables;
-
-    private final BukkitScheduler scheduler;
-
-    private final RavinPlugin plugin;
-
+    private final PathingManager manager;
+    private final List<Vector3> points;
+    private Player player;
+    private World world;
     private int lastSelected = -1;
 
-    private final List<Vector3> points;
+    private boolean wasChanged = false;
 
-    public PathMaker(RavinPlugin plugin, Path path) {
+    public PathMaker(final PathingManager manager, final Path path) {
         this.player = null;
         this.displayedSelectables = new LinkedList<>();
         this.path = path;
         this.points = new LinkedList<>();
-        this.plugin = plugin;
-        this.scheduler = plugin.getServer().getScheduler();
-
-        this.path.getPoints().forEach(p -> addPoint(p.x, p.y, p.z));
+        this.manager = manager;
+        for (final Frame frame : this.path.getFrames()) {
+            final Vector3 initial = frame.getInitial();
+            points.add(new Vector3(initial.x, initial.y, initial.z));
+        }
     }
 
-    public void addPoint(double x, double y, double z) {
-        points.add(new Vector3(x, y, z));
-        addDisplayEffect(x, y, z);
+    public void addPoint(final double x, final double y, final double z) {
+        // TODO, Since we
+        wasChanged = true;
+        points.add(new Vector3(x + 0.5, y, z + 0.5, 0, 0, world));
+        addDisplayEffect(x + 0.5, y, z + 0.5);
     }
 
-    public void setPoint(int index, double x, double y, double z) {
+    public void setPoint(final int index, final double x, final double y, final double z) {
+        wasChanged = true;
         points.remove(index);
-        points.add(index, new Vector3(x, y, z));
-        setDisplayEffect(index, x, y, z);
+        points.add(index, new Vector3(x + 0.5, y, z + 0.5, 0, 0, world));
+        setDisplayEffect(index, x + 0.5, y, z + 0.5);
     }
 
-    public void removePoint(int index) {
+    public void removePoint(final int index) {
+        wasChanged = true;
         points.remove(index);
         removeDisplayEffect(index);
     }
 
-    public void setSelection(int index) {
-        lastSelected = index;
-    }
-
     public int getSelection() {
         return lastSelected;
+    }
+
+    public void setSelection(final int index) {
+        lastSelected = index;
     }
 
     public int size() {
@@ -78,10 +77,10 @@ public class PathMaker implements Selectable {
     /**
      * Returns the index of a stored point if it exists in this path. Or -1 if it does not.
      */
-    public int getPointIndex(double x, double y, double z) {
+    public int getPointIndex(final double x, final double y, final double z) {
         for (int i = 0; i < points.size(); i++) {
-            Vector3 vector = points.get(i);
-            if (vector.x == x && vector.y == y && vector.z == z) {
+            final Vector3 vector = points.get(i);
+            if (vector.x == x + 0.5 && vector.y == y && vector.z == z + 0.5) {
                 return i;
             }
         }
@@ -93,38 +92,39 @@ public class PathMaker implements Selectable {
     }
 
     @Sync.SyncOnly
-    private void addDisplayEffect(double x, double y, double z) {
-        ArmorStand armorStand = world.spawn(new Location(world, x, y - 3, z), ArmorStand.class);
+    private void addDisplayEffect(final double x, final double y, final double z) {
+        final ArmorStand armorStand = world.spawn(new Location(world, x, y - 3, z), ArmorStand.class);
         armorStand.setMarker(true);
         armorStand.setInvisible(true);
         armorStand.setInvulnerable(true);
-        armorStand.setCustomName(ChatColor.AQUA + "#" + points.size());
+        armorStand.setCustomName(ChatColor.AQUA + "#" + (displayedSelectables.size() + 1));
         armorStand.setCustomNameVisible(true);
-        armorStand.setMetadata(PATH_INDEX, new FixedMetadataValue(plugin, points.size() - 1));
-        armorStand.teleport(new Location(world, x + 0.5, y, z + 0.5));
+        armorStand.setMetadata(PATH_INDEX, new FixedMetadataValue(manager.getPlugin(), displayedSelectables.size()));
+        armorStand.teleport(new Location(world, x, y, z));
         displayedSelectables.add(armorStand);
     }
 
     @Sync.SyncOnly
-    private void setDisplayEffect(int index, double x, double y, double z) {
-        ArmorStand armorStand = displayedSelectables.get(index);
-        armorStand.teleport(new Location(world, x + 0.5, y, z + 0.5));
+    private void setDisplayEffect(final int index, final double x, final double y, final double z) {
+        final ArmorStand armorStand = displayedSelectables.get(index);
+        armorStand.teleport(new Location(world, x, y, z));
     }
 
     @Sync.SyncOnly
-    private void removeDisplayEffect(int index) {
+    private void removeDisplayEffect(final int index) {
         displayedSelectables.remove(index).remove();
         for (int i = index; i < displayedSelectables.size(); i++) {
-            displayedSelectables.get(index).setCustomName(ChatColor.AQUA + "#" + (index+1));
+            displayedSelectables.get(index).setCustomName(ChatColor.AQUA + "#" + (index + 1));
         }
     }
 
     @Override
     @Sync.SyncOnly
-    public void onSelect(Player selector) throws SelectionFailException {
+    public void onSelect(final Player selector) throws SelectionFailException {
         if (player == null) {
             player = selector;
             world = player.getWorld();
+            points.forEach(p -> addDisplayEffect(p.x, p.y, p.z));
         } else {
             throw new SelectionFailException("You cannot select this path as it is currently already selected by another player!");
         }
@@ -132,18 +132,25 @@ public class PathMaker implements Selectable {
 
     @Override
     @Sync.SyncOnly
-    public void onUnselect(Player selector) throws SelectionFailException {
+    public void onUnselect(final Player selector) throws SelectionFailException {
         if (player == null) {
             throw new SelectionFailException("You cannot unselect this path as it is already unselected!");
         } else {
             displayedSelectables.forEach(Entity::remove);
             displayedSelectables.clear();
 
-            if (points.size() == 0) {
-                selector.sendMessage(ChatUtil.PREFIX + "Path was removed from actor as no points were added!");
+            if (!wasChanged) {
+                path.resetPathMaker();
+                selector.sendMessage(ChatUtil.PREFIX + "No changes was made to the path!");
+                return;
+            }
+
+            if (points.size() < 2) {
+                selector.sendMessage(ChatUtil.PREFIX + "Path was removed from actor as at least 2 points is required!");
                 path.getAgent().removePath(path);
             } else {
-                scheduler.runTaskAsynchronously(plugin, path::savePathMaker);
+                points.add(points.get(0).copy());
+                manager.savePath(path);
             }
         }
     }

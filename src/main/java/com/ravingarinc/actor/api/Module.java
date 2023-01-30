@@ -145,4 +145,8 @@ public abstract class Module implements Comparable<Module> {
     public void setLoaded(final boolean loaded) {
         isLoaded = loaded;
     }
+
+    public RavinPlugin getPlugin() {
+        return plugin;
+    }
 }
