@@ -6,6 +6,7 @@ import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
+import com.ravingarinc.actor.playback.api.Movement;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -37,8 +38,8 @@ public class PathMaker extends PlaybackBuilder {
         this.path = path;
         this.points = new LinkedList<>();
         this.manager = manager;
-        for (final PathFrame frame : this.path.getFrames()) {
-            final Vector3 initial = frame.getInitial();
+        for (final Movement movement : this.path.getFrames()) {
+            final Vector3 initial = movement.point();
             points.add(new Vector3(initial.x, initial.y, initial.z));
         }
     }

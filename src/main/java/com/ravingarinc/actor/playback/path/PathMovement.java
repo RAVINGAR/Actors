@@ -4,10 +4,10 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.playback.PathingManager;
-import com.ravingarinc.actor.playback.api.Frame;
+import com.ravingarinc.actor.playback.api.Movement;
 import org.bukkit.entity.Player;
 
-public class PathFrame implements Frame {
+public class PathMovement implements Movement {
 
     private final Vector3 initial;
     private final Vector3 terminal;
@@ -26,7 +26,7 @@ public class PathFrame implements Frame {
     private float postPitch;
     private int iteration;
 
-    public PathFrame(final int id, final Vector3 inital, final Vector3 terminal, final Vector3 next, final float speed) {
+    public PathMovement(final int id, final Vector3 inital, final Vector3 terminal, final Vector3 next, final float speed) {
         this.id = id;
         this.initial = inital;
         this.terminal = terminal;
@@ -74,7 +74,8 @@ public class PathFrame implements Frame {
      *
      * @return The point
      */
-    protected Vector3 getInitial() {
+    @Override
+    public Vector3 point() {
         return initial.copy();
     }
 
@@ -87,38 +88,44 @@ public class PathFrame implements Frame {
         return terminal.copy();
     }
 
-    protected int getMax() {
+    @Override
+    public int max() {
         return max;
     }
 
-    protected void increment() {
+    @Override
+    public void increment() {
         iteration++;
     }
 
-    protected void resetIteration() {
+    @Override
+    public void reset() {
         iteration = 0;
     }
 
-    protected int getIteration() {
+    @Override
+    public int iteration() {
         return iteration;
     }
 
-    protected byte getYaw() {
+    @Override
+    public byte yaw() {
         return degreesToByte(yaw);
     }
 
-    protected byte getPitch() {
+    @Override
+    public byte pitch() {
         return degreesToByte(pitch);
     }
 
     @Override
     public Vector3 location(final Player viewer) {
-        final int i = getIteration();
-        final int factor = getMax();
+        final int i = iteration();
+        final int factor = max();
         if (i == 0) {
-            return getInitial();
+            return point();
         } else if (i < factor) {
-            final Vector3 initial = getInitial();
+            final Vector3 initial = point();
             final Vector3 terminal = getTerminal();
             terminal.sub(initial);
             terminal.scale((double) i / factor);
@@ -129,7 +136,8 @@ public class PathFrame implements Frame {
         }
     }
 
-    protected PacketContainer[] getPackets(final PathingManager manager) {
+    @Override
+    public PacketContainer[] getPackets(final PathingManager manager) {
         return iteration < upper ? normalPacket(manager) : transitionPacket(manager);
     }
 

@@ -8,7 +8,7 @@ import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.playback.PathFactory;
 import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
-import com.ravingarinc.actor.playback.path.Path;
+import com.ravingarinc.actor.playback.api.LivePlayback;
 import com.ravingarinc.actor.playback.path.PathMaker;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -32,7 +32,7 @@ public class PathOption extends CommandOption {
                 final Object object = selector.getSelection(player);
                 if (object instanceof Actor<?> actor) {
                     final PathingAgent agent = manager.getAgentOrCreate(actor);
-                    final Path path = PathFactory.build(args[2], agent);
+                    final LivePlayback path = PathFactory.build(args[2], agent);
                     if (path == null) {
                         sender.sendMessage(ChatUtil.PREFIX + "Unknown path type called " + args[2]);
                         return true;

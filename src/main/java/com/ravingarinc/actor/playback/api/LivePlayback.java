@@ -11,15 +11,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public abstract class LivePlayback<T extends Frame> implements Playback {
+public abstract class LivePlayback implements Playback {
     protected final PathingAgent agent;
 
-    protected final List<T> frames;
+    protected final List<Movement> movements;
     protected int lastFrame;
 
     public LivePlayback(final PathingAgent agent) {
         this.agent = agent;
-        this.frames = new ArrayList<>();
+        this.movements = new ArrayList<>();
         this.lastFrame = 0;
     }
 
@@ -27,12 +27,12 @@ public abstract class LivePlayback<T extends Frame> implements Playback {
         return agent;
     }
 
-    public List<T> getFrames() {
-        return Collections.unmodifiableList(frames);
+    public List<Movement> getFrames() {
+        return Collections.unmodifiableList(movements);
     }
 
-    public synchronized T current() {
-        return frames.get(lastFrame);
+    public synchronized Movement current() {
+        return movements.get(lastFrame);
     }
 
     @Override
@@ -40,13 +40,13 @@ public abstract class LivePlayback<T extends Frame> implements Playback {
         return current().location(viewer);
     }
 
-    public synchronized T next() {
+    public synchronized Movement next() {
         lastFrame++;
 
-        if (lastFrame >= frames.size()) {
+        if (lastFrame >= movements.size()) {
             lastFrame = 0;
         }
-        return frames.get(lastFrame);
+        return movements.get(lastFrame);
     }
 
     public synchronized void reset() {
@@ -54,12 +54,12 @@ public abstract class LivePlayback<T extends Frame> implements Playback {
     }
 
     public synchronized void clearFrames() {
-        this.frames.clear();
+        this.movements.clear();
         this.lastFrame = 0;
     }
 
-    public synchronized void addFrame(final T frame) {
-        this.frames.add(frame);
+    public synchronized void addFrame(final Movement movement) {
+        this.movements.add(movement);
     }
 
     public abstract PlaybackBuilder getBuilder(PathingManager manager);

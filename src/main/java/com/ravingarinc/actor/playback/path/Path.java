@@ -10,22 +10,17 @@ import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.api.LivePlayback;
+import com.ravingarinc.actor.playback.api.Movement;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
 import static com.ravingarinc.actor.playback.PathingManager.PACKET_VALID_META;
 
-public class Path extends LivePlayback<PathFrame> {
+public class Path extends LivePlayback {
 
     public Path(final PathingAgent agent) {
         super(agent);
-    }
-
-
-    @Override
-    public synchronized PathFrame current() {
-        return frames.get(lastFrame);
     }
 
     private Vector3 location() {
@@ -33,7 +28,7 @@ public class Path extends LivePlayback<PathFrame> {
     }
 
     public void addFrame(final int id, final Vector3 current, final Vector3 terminal, final Vector3 next, final float speed) {
-        addFrame(new PathFrame(id, current, terminal, next, speed));
+        addFrame(new PathMovement(id, current, terminal, next, speed));
     }
 
     @Override
@@ -53,7 +48,7 @@ public class Path extends LivePlayback<PathFrame> {
     @Override
     @Sync.SyncOnly
     public void reset(final PathingManager manager) {
-        current().resetIteration();
+        current().reset();
         reset(); //synchronized
         synchronise(manager);
     }
@@ -65,22 +60,22 @@ public class Path extends LivePlayback<PathFrame> {
 
     private void queueNextFrame(final PathingManager manager, final Actor<?> actor) {
         final UUID uuid = actor.getUUID();
-        final PathFrame frame = current();
-        manager.sendPacket(actor.getViewers().toArray(new Player[0]), frame.getPackets(manager));
-        frame.increment();
-        for (int i = frame.getIteration(); i < frame.getMax() - 1; i++) {
+        final Movement movement = current();
+        manager.sendPacket(actor.getViewers().toArray(new Player[0]), movement.getPackets(manager));
+        movement.increment();
+        for (int i = movement.iteration(); i < movement.max() - 1; i++) {
             manager.queue(uuid, () -> {
-                manager.sendPacket(actor.getViewers().toArray(new Player[0]), frame.getPackets(manager));
-                frame.increment();
+                manager.sendPacket(actor.getViewers().toArray(new Player[0]), movement.getPackets(manager));
+                movement.increment();
             });
         }
         manager.queue(uuid, () -> {
-            frame.increment();
+            movement.increment();
             final Vector3 location = location();
             actor.setLocation(location);
             manager.sendPacket(actor.getViewers().toArray(new Player[0]), getTeleportPacket(manager, actor.getId(), location));
             AsyncHandler.runSynchronously(() -> actor.getEntity().teleport(location.toBukkitLocation()));
-            frame.resetIteration();
+            movement.reset();
             next();
             queueNextFrame(manager, actor);
         });
@@ -102,8 +97,8 @@ public class Path extends LivePlayback<PathFrame> {
                     .write(1, location.y)
                     .write(2, location.z);
             packet.getBytes()
-                    .write(0, current().getPitch())
-                    .write(1, current().getYaw());
+                    .write(0, current().pitch())
+                    .write(1, current().yaw());
             packet.getBooleans().write(0, true);
             packet.setMeta(PACKET_VALID_META, true);
         });

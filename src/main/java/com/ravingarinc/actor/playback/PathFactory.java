@@ -1,5 +1,6 @@
 package com.ravingarinc.actor.playback;
 
+import com.ravingarinc.actor.playback.api.LivePlayback;
 import com.ravingarinc.actor.playback.path.Path;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +20,7 @@ public class PathFactory {
     }
 
     @Nullable
-    public static Path build(final String pathKey, final PathingAgent agent) {
+    public static LivePlayback build(final String pathKey, final PathingAgent agent) {
         final Type<?> type = pathTypes.get(pathKey.toLowerCase());
         if (type == null) {
             return null;
@@ -31,7 +32,7 @@ public class PathFactory {
         return new ArrayList<>(pathTypes.keySet());
     }
 
-    public static class Type<T extends Path> {
+    public static class Type<T extends LivePlayback> {
         private final Function<PathingAgent, T> function;
         private final String key;
 
