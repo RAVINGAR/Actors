@@ -1,11 +1,11 @@
-package com.ravingarinc.actor.pathing.type;
+package com.ravingarinc.actor.playback.path;
 
 import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.Vector3;
-import com.ravingarinc.actor.npc.selector.Selectable;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.playback.PathingManager;
+import com.ravingarinc.actor.playback.PlaybackBuilder;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -14,10 +14,11 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.FixedMetadataValue;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-public class PathMaker implements Selectable {
+public class PathMaker extends PlaybackBuilder {
 
     public static final String PATH_INDEX = "path_maker_index";
     private final Path path;
@@ -36,14 +37,13 @@ public class PathMaker implements Selectable {
         this.path = path;
         this.points = new LinkedList<>();
         this.manager = manager;
-        for (final Frame frame : this.path.getFrames()) {
+        for (final PathFrame frame : this.path.getFrames()) {
             final Vector3 initial = frame.getInitial();
             points.add(new Vector3(initial.x, initial.y, initial.z));
         }
     }
 
     public void addPoint(final double x, final double y, final double z) {
-        // TODO, Since we
         wasChanged = true;
         points.add(new Vector3(x + 0.5, y, z + 0.5, 0, 0, world));
         addDisplayEffect(x + 0.5, y, z + 0.5);
@@ -72,6 +72,10 @@ public class PathMaker implements Selectable {
 
     public int size() {
         return points.size();
+    }
+
+    public Path getPath() {
+        return path;
     }
 
     /**
@@ -140,7 +144,6 @@ public class PathMaker implements Selectable {
             displayedSelectables.clear();
 
             if (!wasChanged) {
-                path.resetPathMaker();
                 selector.sendMessage(ChatUtil.PREFIX + "No changes was made to the path!");
                 return;
             }
@@ -150,8 +153,29 @@ public class PathMaker implements Selectable {
                 path.getAgent().removePath(path);
             } else {
                 points.add(points.get(0).copy());
-                manager.savePath(path);
+                manager.savePath(this);
             }
         }
+    }
+
+    @Override
+    public void save() {
+        final Iterator<Vector3> iterator = points.iterator();
+        path.clearFrames();
+
+        final int id = path.getAgent().getActor().getId();
+        final Vector3 first = iterator.next();
+        final Vector3 second = iterator.next();
+        Vector3 previous = first;
+        Vector3 terminal = second;
+        do {
+            final Vector3 next = iterator.next();
+            path.addFrame(id, previous, terminal, next, 0.1f);
+            previous = terminal;
+            terminal = next;
+        } while (iterator.hasNext());
+        path.addFrame(id, previous, terminal, second, 0.1f);
+
+        points.clear();
     }
 }

@@ -11,7 +11,7 @@ import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.ModuleListener;
 import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.playback.PathingManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
@@ -55,7 +55,7 @@ public class ActorListener extends ModuleListener {
                     // Actor may exist but isn't loaded. How do we fix this? by getting bitches!
                     return;
                 }
-                pathingManager.syncIfMoving(actor);
+                pathingManager.syncIfMoving(actor, event.getPlayer());
                 event.setCancelled(true);
                 final Player player = event.getPlayer();
                 scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, player));

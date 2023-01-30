@@ -7,7 +7,7 @@ import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.type.PathMaker;
+import com.ravingarinc.actor.playback.path.PathMaker;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;

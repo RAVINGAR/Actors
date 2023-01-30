@@ -16,7 +16,7 @@ import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import org.bukkit.entity.Player;

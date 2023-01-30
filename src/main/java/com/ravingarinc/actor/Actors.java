@@ -4,7 +4,7 @@ import com.ravingarinc.actor.command.ActorsCommand;
 import com.ravingarinc.actor.npc.ActorListener;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.ConfigManager;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;

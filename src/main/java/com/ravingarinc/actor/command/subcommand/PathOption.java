@@ -5,11 +5,11 @@ import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.PathFactory;
-import com.ravingarinc.actor.pathing.PathingAgent;
-import com.ravingarinc.actor.pathing.PathingManager;
-import com.ravingarinc.actor.pathing.type.Path;
-import com.ravingarinc.actor.pathing.type.PathMaker;
+import com.ravingarinc.actor.playback.PathFactory;
+import com.ravingarinc.actor.playback.PathingAgent;
+import com.ravingarinc.actor.playback.PathingManager;
+import com.ravingarinc.actor.playback.path.Path;
+import com.ravingarinc.actor.playback.path.PathMaker;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -37,10 +37,10 @@ public class PathOption extends CommandOption {
                         sender.sendMessage(ChatUtil.PREFIX + "Unknown path type called " + args[2]);
                         return true;
                     }
-                    manager.stop(actor);
+                    agent.stop(manager);
                     agent.addPath(path);
                     selector.removeSelection(player, false);
-                    selector.trySelect(player, path.getPathMaker(manager), "Path");
+                    selector.trySelect(player, path.getBuilder(manager), "Path");
                     sendPathHelp(sender);
                 } else {
                     sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "You have no actor selected!");
@@ -53,7 +53,7 @@ public class PathOption extends CommandOption {
             }
             return true;
         }).buildTabCompletions((sender, args) -> {
-            if (args.length == 2) {
+            if (args.length == 3) {
                 return PathFactory.getTypes();
             }
             return new ArrayList<>();
@@ -77,9 +77,9 @@ public class PathOption extends CommandOption {
                         sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "That is not a valid path number!");
                         return true;
                     }
-                    manager.reset(actor);
+                    agent.reset(manager);
                     selector.removeSelection(player, false);
-                    selector.trySelect(player, agent.getPath(i - 1).getPathMaker(manager), "Path #" + i);
+                    selector.trySelect(player, agent.getPath(i - 1).getBuilder(manager), "Path #" + i);
                     sendPathHelp(player);
                 } else {
                     sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "You have no actor selected!");
@@ -134,7 +134,7 @@ public class PathOption extends CommandOption {
                         sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "That is not a valid path number!");
                         return true;
                     }
-                    manager.select(actor, i - 1);
+                    agent.select(manager, i - 1);
                     sender.sendMessage(ChatColor.AQUA + "Path was selected!");
                 }
             } else {
@@ -159,8 +159,13 @@ public class PathOption extends CommandOption {
         addOption("start", "Start moving an actor along a path.", 2, (sender, args) -> {
             if (sender instanceof Player player) {
                 if (selector.getSelection(player) instanceof Actor<?> actor) {
-                    sender.sendMessage(ChatColor.AQUA + "Actor's path was stopped!");
-                    manager.start(actor);
+                    final PathingAgent agent = manager.getAgentOrNull(actor);
+                    if (agent == null) {
+                        sender.sendMessage(ChatColor.RED + "This actor has no paths!");
+                        return true;
+                    }
+                    agent.start(manager);
+                    sender.sendMessage(ChatColor.AQUA + "Actor's path was started!");
                 }
             } else {
                 sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "This command can only be used by a player!");
@@ -171,7 +176,12 @@ public class PathOption extends CommandOption {
         addOption("stop", "Stop moving an actor along a path", 2, (sender, args) -> {
             if (sender instanceof Player player) {
                 if (selector.getSelection(player) instanceof Actor<?> actor) {
-                    manager.stop(actor);
+                    final PathingAgent agent = manager.getAgentOrNull(actor);
+                    if (agent == null) {
+                        sender.sendMessage(ChatColor.RED + "That actor is not currently moving!");
+                        return true;
+                    }
+                    agent.stop(manager);
                     sender.sendMessage(ChatColor.AQUA + "Actor's path was stopped!");
                 }
             } else {
