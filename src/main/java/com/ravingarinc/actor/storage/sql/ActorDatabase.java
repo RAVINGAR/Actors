@@ -104,6 +104,16 @@ public class ActorDatabase extends Database {
         }
     }
 
+    public void deleteActor(final Actor<?> actor) {
+        queue(() -> prepareStatement(Actors.delete, (statement) -> {
+            try {
+                statement.setString(1, actor.getUUID().toString());
+            } catch (final SQLException e) {
+                I.log(Level.SEVERE, "Encountered issue preparing statement!", e);
+            }
+        }));
+    }
+
     private void addUnloadedActor(final UUID uuid, final String type, final int x, final int y, final int z, final String worldName, final String arguments) {
         final List<UnloadedActor> actors = unloadedActors.computeIfAbsent(worldName, name -> new ArrayList<>());
         actors.add(new UnloadedActor(uuid, type, x, y, z, worldName, arguments));

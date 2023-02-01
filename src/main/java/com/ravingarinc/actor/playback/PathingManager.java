@@ -87,6 +87,16 @@ public class PathingManager extends Module {
         return agents.get(actor.getUUID());
     }
 
+    public void removeAgent(final Actor<?> actor) {
+        final PathingAgent agent = getAgentOrNull(actor);
+        if (agent == null) {
+            return;
+        }
+        agent.stop(this);
+        agents.remove(actor.getUUID());
+        //todo remove from database here as well!
+    }
+
     public void savePath(final PathMaker path) {
         //todo databse queries here as well
         actorManager.queue(path::save);

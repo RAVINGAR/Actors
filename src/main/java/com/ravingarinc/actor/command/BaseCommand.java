@@ -11,11 +11,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
 
 public class BaseCommand extends CommandOption implements CommandExecutor {
 
     public BaseCommand(final String identifier, final String permission) {
         super(identifier, null, permission, "", 1, (p, s) -> false);
+    }
+
+    public BaseCommand(final String identifier, final String permission, final String description, final int requiredArgs, final BiFunction<CommandSender, String[], Boolean> function) {
+        super(identifier, null, permission, description, requiredArgs, function);
     }
 
     public void register(final JavaPlugin plugin) {

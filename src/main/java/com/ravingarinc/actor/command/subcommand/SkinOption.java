@@ -1,6 +1,6 @@
 package com.ravingarinc.actor.command.subcommand;
 
-import com.ravingarinc.actor.command.ChatComponents;
+import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.skin.SkinClient;
 import org.bukkit.ChatColor;
@@ -98,7 +98,7 @@ public class SkinOption extends CommandOption {
         });
 
         addOption("list", 2, (sender, args) -> {
-            sender.sendMessage(ChatComponents.TITLE);
+            sender.sendMessage(ChatUtil.TITLE.replace("$1", "Skin List"));
             sender.sendMessage(ChatColor.DARK_GRAY + "Currently Loaded -->");
             client.getSkinNames().forEach(skin -> sender.sendMessage(ChatColor.GRAY + "- " + skin));
             return true;

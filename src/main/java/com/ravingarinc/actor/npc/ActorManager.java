@@ -15,7 +15,9 @@ import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
+import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
@@ -110,6 +112,36 @@ public class ActorManager extends Module {
             // todo load pathes into pathing manager
             saveLater(actor);
         });
+    }
+
+    public void deleteActor(final int id) {
+        final Actor<?> actor = getActor(id);
+        if (actor == null) {
+            return;
+        }
+        deleteActor(actor);
+    }
+
+    public void deleteActor(final UUID uuid) {
+        final Actor<?> actor = getActor(uuid);
+        if (actor == null) {
+            return;
+        }
+        deleteActor(actor);
+    }
+
+    /**
+     * Deletes an actor
+     *
+     * @param actor The actor to delete
+     */
+    public void deleteActor(final Actor<?> actor) {
+        plugin.getModule(SelectorManager.class).removeActorSelection(actor);
+        plugin.getModule(PathingManager.class).removeAgent(actor);
+        if (actor instanceof PlayerActor playerActor) {
+            client.unlinkActorAll(playerActor);
+        }
+        database.deleteActor(actor);
     }
 
     public Set<Actor<?>> filterActors(final Predicate<? super Actor<?>> filter) {

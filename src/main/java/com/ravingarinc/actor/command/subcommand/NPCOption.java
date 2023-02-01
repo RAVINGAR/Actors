@@ -177,6 +177,26 @@ public class NPCOption extends CommandOption {
             }
         });
 
+        addOption("delete", 2, (sender, args) -> {
+            if (sender instanceof Player player) {
+                final Object object = selector.getSelection(player);
+                if (object instanceof Actor<?> actor) {
+                    ChatUtil.send(sender,
+                            ChatUtil.createText(ChatColor.GRAY + "You are about to delete '" + actor.getName() + "'!\n " +
+                                    "Are you sure you want to do this? Please "),
+                            ChatUtil.createCallback(player, ChatColor.GREEN + "[Confirm]", "actor.delete.confirm", "Delete this selected actor!", () -> {
+                                manager.deleteActor(actor);
+                                player.sendMessage(ChatColor.GREEN + "Actor has been deleted!");
+                            }));
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You have no actor selected!");
+                }
+            } else {
+                sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "This command can only be used by a player!");
+            }
+            return true;
+        });
+
         addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

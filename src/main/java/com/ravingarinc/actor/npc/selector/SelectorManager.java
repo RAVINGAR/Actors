@@ -7,6 +7,7 @@ import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.path.PathMaker;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
@@ -84,6 +85,17 @@ public class SelectorManager extends ModuleListener {
             return null;
         }
         return selector.getSelection();
+    }
+
+    public void removeActorSelection(final Actor<?> actor) {
+        playerSelections.values().forEach(selector -> {
+            if (selector.getSelection() instanceof Actor<?> found && found.equals(actor)) {
+                removeSelection(selector, false);
+            }
+            if (selector.getSelection() instanceof PlaybackBuilder builder && builder.getOwningAgent().getActor().equals(actor)) {
+                removeSelection(selector, false);
+            }
+        });
     }
 
     public boolean isSelecting(final Player player) {

@@ -18,6 +18,8 @@ public abstract class PlaybackBuilder implements Selectable {
         //todo move stuff from pathmaker to here!
     }
 
+    public abstract PathingAgent getOwningAgent();
+
     public abstract void save();
 
 

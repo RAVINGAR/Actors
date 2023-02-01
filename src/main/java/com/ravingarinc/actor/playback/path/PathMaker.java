@@ -4,6 +4,7 @@ import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
+import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.api.Movement;
@@ -157,6 +158,11 @@ public class PathMaker extends PlaybackBuilder {
                 manager.savePath(this);
             }
         }
+    }
+
+    @Override
+    public PathingAgent getOwningAgent() {
+        return path.getAgent();
     }
 
     @Override
