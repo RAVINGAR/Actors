@@ -1,6 +1,7 @@
-package com.ravingarinc.actor.pathing;
+package com.ravingarinc.actor.playback;
 
-import com.ravingarinc.actor.pathing.type.Path;
+import com.ravingarinc.actor.playback.api.LivePlayback;
+import com.ravingarinc.actor.playback.path.Path;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -10,16 +11,16 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class PathFactory {
-    public static final Type<Path> SCHEDULED_PATH = new Type<>("scheduled", Path::new);
+    public static final Type<Path> FIXED = new Type<>("fixed", Path::new);
 
     private static final Map<String, Type<?>> pathTypes = new LinkedHashMap<>();
 
     static {
-        pathTypes.put(SCHEDULED_PATH.getKey(), SCHEDULED_PATH);
+        pathTypes.put(FIXED.getKey(), FIXED);
     }
 
     @Nullable
-    public static Path build(final String pathKey, final PathingAgent agent) {
+    public static LivePlayback build(final String pathKey, final PathingAgent agent) {
         final Type<?> type = pathTypes.get(pathKey.toLowerCase());
         if (type == null) {
             return null;
@@ -31,7 +32,7 @@ public class PathFactory {
         return new ArrayList<>(pathTypes.keySet());
     }
 
-    public static class Type<T extends Path> {
+    public static class Type<T extends LivePlayback> {
         private final Function<PathingAgent, T> function;
         private final String key;
 

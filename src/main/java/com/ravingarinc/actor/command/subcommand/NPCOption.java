@@ -1,11 +1,8 @@
 package com.ravingarinc.actor.command.subcommand;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
-import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
@@ -15,6 +12,9 @@ import com.ravingarinc.actor.npc.type.LivingActor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.skin.ActorSkin;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.command.CommandOption;
+import com.ravingarinc.api.module.RavinPlugin;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -35,7 +35,7 @@ public class NPCOption extends CommandOption {
     private final SelectorManager selector;
 
     public NPCOption(final CommandOption parent, final RavinPlugin plugin) {
-        super("npc", parent, "actors.npc","", 2, (sender, args) -> false);
+        super("npc", parent, "actors.npc", "", 2, (sender, args) -> false);
         this.manager = plugin.getModule(ActorManager.class);
         this.client = plugin.getModule(SkinClient.class);
         this.selector = plugin.getModule(SelectorManager.class);
@@ -176,5 +176,27 @@ public class NPCOption extends CommandOption {
                 return Registry.getArgumentTypes(Registry.ACTOR_ARGS).keySet().stream().toList();
             }
         });
+
+        addOption("delete", 2, (sender, args) -> {
+            if (sender instanceof Player player) {
+                final Object object = selector.getSelection(player);
+                if (object instanceof Actor<?> actor) {
+                    ChatUtil.send(sender,
+                            ChatUtil.createText(ChatColor.GRAY + "You are about to delete '" + actor.getName() + "'!\n " +
+                                    "Are you sure you want to do this? Please "),
+                            ChatUtil.createCallback(player, ChatColor.GREEN + "[Confirm]", "actor.delete.confirm", "Delete this selected actor!", () -> {
+                                manager.deleteActor(actor);
+                                player.sendMessage(ChatColor.GREEN + "Actor has been deleted!");
+                            }));
+                } else {
+                    sender.sendMessage(ChatColor.RED + "You have no actor selected!");
+                }
+            } else {
+                sender.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "This command can only be used by a player!");
+            }
+            return true;
+        });
+
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

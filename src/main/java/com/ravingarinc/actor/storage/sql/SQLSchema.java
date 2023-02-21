@@ -35,6 +35,8 @@ public class SQLSchema {
                 SIGNATURE + " = ? " +
                 "WHERE " + UUID + " = ?";
 
+        public static final String delete = "DELETE FROM " + SKINS +
+                " WHERE " + UUID + " = ?";
     }
 
     public static class Actors {
@@ -76,5 +78,40 @@ public class SQLSchema {
                 WORLD + " = ? , " +
                 ARGUMENTS + " = ? " +
                 "WHERE " + UUID + " = ?";
+
+        public static final String delete = "DELETE FROM " + ACTORS +
+                " WHERE " + UUID + " = ?";
+    }
+
+    public static class Paths {
+        public static final String PATHS = "paths";
+
+        public static final String selectAll = "SELECT * FROM " + PATHS;
+        public static final String UUID = "actor_uuid";
+        public static final String INDEX = "path_index";
+        public static final String TYPE = "type";
+        public static final String ARGUMENTS = "arguments";
+        public static final String createTable = "CREATE TABLE IF NOT EXISTS " + PATHS + " (" +
+                UUID + " TEXT NOT NULL," +
+                INDEX + " INTEGER, NOT NULL," +
+                TYPE + " TEXT NOT NULL," +
+                ARGUMENTS + " TEXT NOT NULL)";
+        public static final String select = "SELECT " + TYPE + ", " + ARGUMENTS +
+                " FROM " + PATHS +
+                " WHERE " + UUID + " = ? AND " + INDEX + " = ?";
+
+        public static final String insert = "INSERT INTO " + PATHS + "(" +
+                UUID + "," +
+                INDEX + "," +
+                TYPE + "," +
+                ARGUMENTS + ") VALUES(?,?,?,?)";
+
+        public static final String update = "UPDATE " + PATHS + " SET " +
+                TYPE + " = ? , " +
+                ARGUMENTS + " = ? " +
+                "WHERE " + UUID + " = ? AND " + INDEX + " = ?";
+
+        public static final String delete = "DELETE FROM " + PATHS +
+                " WHERE " + UUID + " = ? AND " + INDEX + " = ?";
     }
 }

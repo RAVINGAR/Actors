@@ -4,11 +4,12 @@ import com.ravingarinc.actor.command.ActorsCommand;
 import com.ravingarinc.actor.npc.ActorListener;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.ConfigManager;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import com.ravingarinc.actor.storage.sql.SkinDatabase;
+import com.ravingarinc.api.module.RavinPlugin;
 
 public final class Actors extends RavinPlugin {
     @Override
@@ -25,7 +26,7 @@ public final class Actors extends RavinPlugin {
         addModule(SkinDatabase.class);
         addModule(ActorDatabase.class);
 
-        addModule(SelectorManager.class);
+        addModule(SelectorManager.class); // this must be after everything so it cancels any tasks
     }
 
     @Override

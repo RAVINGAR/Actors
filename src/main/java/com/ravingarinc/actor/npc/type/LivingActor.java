@@ -1,9 +1,9 @@
 package com.ravingarinc.actor.npc.type;
 
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
@@ -26,7 +26,7 @@ public class LivingActor extends Actor<LivingEntity> {
     }
 
     @Override
-    public void spawn(final ActorManager actorManager, final Vector3 location, final Player viewer) {
+    public void spawn(final ActorManager actorManager, final Player viewer) {
 
     }
 

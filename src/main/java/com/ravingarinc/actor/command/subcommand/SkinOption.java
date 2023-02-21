@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.command.subcommand;
 
-import com.ravingarinc.actor.command.ChatComponents;
-import com.ravingarinc.actor.command.CommandOption;
+import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.command.CommandOption;
 import org.bukkit.ChatColor;
 
 import java.io.File;
@@ -91,21 +91,19 @@ public class SkinOption extends CommandOption {
             }
         });
 
-        addOption("save", 3, (sender, args) -> {
-            if (args.length < 4) {
-                sender.sendMessage(ChatColor.RED + "Incorrect usage - /actors skin save <url> <name>");
-                return true;
-            }
+        addOption("save", ChatColor.AQUA + "<url> <name>" + ChatColor.GRAY + "- Download a skin from a url and save it.", 4, (sender, args) -> {
             client.saveSkin(sender, args[2], args[3]);
             sender.sendMessage(ChatColor.GRAY + "The url " + args[2] + " is being saved to id '" + args[3] + "'");
             return true;
         });
 
         addOption("list", 2, (sender, args) -> {
-            sender.sendMessage(ChatComponents.TITLE);
+            sender.sendMessage(ChatUtil.TITLE.replace("$1", "Skin List"));
             sender.sendMessage(ChatColor.DARK_GRAY + "Currently Loaded -->");
             client.getSkinNames().forEach(skin -> sender.sendMessage(ChatColor.GRAY + "- " + skin));
             return true;
         }).buildTabCompletions((sender, args) -> new ArrayList<>());
+
+        addHelpOption(ChatColor.DARK_AQUA, ChatColor.AQUA);
     }
 }

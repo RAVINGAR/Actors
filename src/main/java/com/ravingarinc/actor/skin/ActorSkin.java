@@ -2,9 +2,9 @@ package com.ravingarinc.actor.skin;
 
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.google.common.collect.Multimap;
-import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import com.ravingarinc.api.Sync;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

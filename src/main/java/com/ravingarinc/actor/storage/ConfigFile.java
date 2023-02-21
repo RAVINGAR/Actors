@@ -1,7 +1,7 @@
 package com.ravingarinc.actor.storage;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;

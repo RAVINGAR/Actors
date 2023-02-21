@@ -7,32 +7,29 @@ import com.comphenix.protocol.events.ListenerPriority;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleListener;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.actor.playback.PathingManager;
+import com.ravingarinc.api.module.ModuleListener;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
 
 public class ActorListener extends ModuleListener {
     private final Set<PacketType> spawnPackets;
     private final BukkitScheduler scheduler;
     private ActorManager actorManager;
     private ProtocolManager protocolManager;
+
+    private PathingManager pathingManager;
 
     public ActorListener(final RavinPlugin plugin) {
         super(ActorListener.class, plugin, ActorManager.class);
@@ -46,6 +43,7 @@ public class ActorListener extends ModuleListener {
     public void load() throws ModuleLoadException {
         actorManager = plugin.getModule(ActorManager.class);
         protocolManager = ProtocolLibrary.getProtocolManager();
+        pathingManager = plugin.getModule(PathingManager.class);
 
         protocolManager.addPacketListener(new PacketAdapter(plugin, ListenerPriority.NORMAL, spawnPackets) {
             @Override
@@ -57,12 +55,10 @@ public class ActorListener extends ModuleListener {
                     // Actor may exist but isn't loaded. How do we fix this? by getting bitches!
                     return;
                 }
+                pathingManager.syncIfMoving(actor, event.getPlayer());
                 event.setCancelled(true);
-                final StructureModifier<Double> doubles = container.getDoubles();
-                final Vector3 location = new Vector3(doubles.read(0), doubles.read(1), doubles.read(2));
                 final Player player = event.getPlayer();
-                I.log(Level.WARNING, "Actor Spawn Packet!");
-                scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, location, player));
+                scheduler.runTaskAsynchronously(plugin, () -> actor.spawn(actorManager, player));
             }
         });
 
@@ -79,11 +75,10 @@ public class ActorListener extends ModuleListener {
 
                     scheduler.runTaskAsynchronously(plugin, () -> {
                         for (final int id : list) {
-
                             final Actor<?> actor = actorManager.getActor(id);
                             if (actor != null) {
-                                I.log(Level.WARNING, "Actor Destroy Packet!");
                                 actorManager.queue(() -> actor.removeViewer(player));
+                                break;
                             }
                         }
                     });
@@ -106,16 +101,8 @@ public class ActorListener extends ModuleListener {
 
     }
 
-    @EventHandler
-    public void onPlayerJoin(final PlayerJoinEvent event) {
-        final Player player = event.getPlayer();
-        //actorManager.filterActors(actor ->
-        //        actor.getSpawnLocation().getWorldName().equalsIgnoreCase(player.getWorld().getName()));
-    }
-
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    @EventHandler(ignoreCancelled = true)
     public void onEntityDamage(final EntityDamageEvent event) {
-        // handle on actor damage
         final Actor<?> actor = actorManager.getActor(event.getEntity().getEntityId());
         if (actor == null) {
             return;

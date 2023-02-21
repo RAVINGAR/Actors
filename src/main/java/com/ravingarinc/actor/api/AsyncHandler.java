@@ -1,7 +1,8 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.actor.api;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.concurrent.AsynchronousException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.Blocking;
@@ -39,7 +40,7 @@ public class AsyncHandler {
     @Async.Execute
     @Blocking
     @Nullable
-    public static <V> V executeBlockingSyncComputation(final Callable<V> callable, long timeout) throws AsynchronousException {
+    public static <V> V executeBlockingSyncComputation(final Callable<V> callable, final long timeout) throws AsynchronousException {
         final FutureTask<V> task = new FutureTask<>(callable);
         scheduler.scheduleSyncDelayedTask(plugin, task);
         try {
@@ -79,8 +80,7 @@ public class AsyncHandler {
     public static void waitForFuture(final Future<?> future) {
         try {
             future.get(1000, TimeUnit.MILLISECONDS);
-        }
-        catch(ExecutionException | InterruptedException | TimeoutException e) {
+        } catch (ExecutionException | InterruptedException | TimeoutException e) {
             I.log(Level.SEVERE, "Encountered exception waiting for future!", e);
         }
     }

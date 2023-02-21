@@ -1,13 +1,14 @@
 package com.ravingarinc.actor.npc.selector;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleListener;
-import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.type.PathMaker;
+import com.ravingarinc.actor.playback.PlaybackBuilder;
+import com.ravingarinc.actor.playback.path.PathMaker;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.module.ModuleListener;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
@@ -32,6 +33,7 @@ public class SelectorManager extends ModuleListener {
 
     /**
      * This selector manager is mainly treated as Sync Only
+     *
      * @param plugin
      */
     public SelectorManager(final RavinPlugin plugin) {
@@ -52,8 +54,7 @@ public class SelectorManager extends ModuleListener {
         this.playerSelections.values().forEach(selector -> {
             try {
                 selector.unselect(false);
-            }
-            catch(SelectionFailException e) {
+            } catch (final SelectionFailException e) {
                 I.log(Level.WARNING, "Encountered exception removing selections..", e);
             }
         });
@@ -79,44 +80,54 @@ public class SelectorManager extends ModuleListener {
 
     @Nullable
     public Selectable getSelection(final Player player) {
-        Selector selector = playerSelections.get(player.getUniqueId());
-        if(selector == null) {
+        final Selector selector = playerSelections.get(player.getUniqueId());
+        if (selector == null) {
             return null;
         }
         return selector.getSelection();
+    }
+
+    public void removeActorSelection(final Actor<?> actor) {
+        playerSelections.values().forEach(selector -> {
+            if (selector.getSelection() instanceof Actor<?> found && found.equals(actor)) {
+                removeSelection(selector, false);
+            }
+            if (selector.getSelection() instanceof PlaybackBuilder builder && builder.getOwningAgent().getActor().equals(actor)) {
+                removeSelection(selector, false);
+            }
+        });
     }
 
     public boolean isSelecting(final Player player) {
         return playerSelections.containsKey(player.getUniqueId());
     }
 
-    public void removeSelection(final Selector selector, boolean resumeLastSelection) {
-        Selectable object = selector.getSelection();
-        if(object != null) {
+    public void removeSelection(final Selector selector, final boolean resumeLastSelection) {
+        final Selectable object = selector.getSelection();
+        if (object != null) {
             try {
                 selector.unselect(resumeLastSelection);
                 selector.getPlayer().sendMessage(ChatUtil.PREFIX + "Your current selection has been removed.");
-                if(resumeLastSelection) {
+                if (resumeLastSelection) {
                     selector.getPlayer().sendMessage(ChatUtil.PREFIX + "Your previous selection has been resumed.");
                 }
-            }
-            catch(SelectionFailException e) {
+            } catch (final SelectionFailException e) {
                 selector.getPlayer().sendMessage(ChatUtil.PREFIX + e.getMessage());
             }
         }
     }
 
-    public void removeSelection(final Player player, boolean resumeLastSelection) {
-        Selector selector = playerSelections.get(player.getUniqueId());
-        if(selector == null) {
+    public void removeSelection(final Player player, final boolean resumeLastSelection) {
+        final Selector selector = playerSelections.get(player.getUniqueId());
+        if (selector == null) {
             return;
         }
         removeSelection(selector, resumeLastSelection);
     }
 
     public void trySelect(final Player player, final Selectable selection, final String messageType) {
-        Selector selector = playerSelections.get(player.getUniqueId());
-        if(selector != null) {
+        final Selector selector = playerSelections.get(player.getUniqueId());
+        if (selector != null) {
             this.trySelect(selector, selection, messageType);
         }
     }
@@ -126,36 +137,32 @@ public class SelectorManager extends ModuleListener {
      * is the same type as the newly selected object!
      */
     public void trySelect(final Selector selector, final Selectable selection, final String messageType) {
-        Player player = selector.getPlayer();
-        if(selector.getSelection() == null) {
+        final Player player = selector.getPlayer();
+        if (selector.getSelection() == null) {
             try {
                 selector.select(selection);
                 player.sendMessage(ChatUtil.PREFIX + "You are now selecting " + messageType);
-            }
-            catch(SelectionFailException exception) {
+            } catch (final SelectionFailException exception) {
                 player.sendMessage(ChatUtil.PREFIX + exception.getMessage());
             }
-        }
-        else {
-            Selectable selected = selector.getSelection();
-            if(selected.getClass().isAssignableFrom(selection.getClass())) {
+        } else {
+            final Selectable selected = selector.getSelection();
+            if (selected.getClass().isAssignableFrom(selection.getClass())) {
                 try {
                     selector.unselect(false);
                     selector.select(selection);
                     player.sendMessage(ChatUtil.PREFIX + "You are now selecting " + messageType);
-                }
-                catch(SelectionFailException exception) {
+                } catch (final SelectionFailException exception) {
                     player.sendMessage(ChatUtil.PREFIX + exception.getMessage());
                 }
-            }
-            else {
+            } else {
                 player.sendMessage(ChatUtil.PREFIX + ChatColor.RED + "You cannot select that object at this time! Please unselect your current object.");
             }
         }
     }
 
     //This priority must be lower than the EntityDamageEvent listener in ActorListener
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.NORMAL)
+    @EventHandler(priority = EventPriority.LOW)
     public void onEntityDamageEvent(final EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Player player && isSelecting(player)) {
             final Entity entity = event.getEntity();
@@ -175,57 +182,58 @@ public class SelectorManager extends ModuleListener {
     }
 
     @EventHandler(priority = EventPriority.LOW)
-    public void onInteractEvent(PlayerInteractEvent event) {
-        if(event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
+    public void onInteractEvent(final PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND || event.getClickedBlock() == null) {
             return;
         }
 
-        Player player = event.getPlayer();
-        if(player.isSneaking() && getSelection(player) instanceof PathMaker path) {
-            Block block = event.getClickedBlock();
-            int x = block.getX();
-            int y = block.getY() + 1;
-            int z = block.getZ();
-            if(event.getAction() == Action.LEFT_CLICK_BLOCK) {
-                 int i = path.getPointIndex(x, y, z);
-                 if(i == -1) {
-                     int lastSelection = path.getSelection();
-                     if(lastSelection == -1) {
-                         path.addPoint(x, y, z);
-                         player.sendMessage(ChatColor.AQUA + "Added point at '" + x + ", " + y + ", " + z + "' for index " + (path.size()));
-                     }
-                     else {
-                         path.setPoint(lastSelection, x, y, z);
-                         player.sendMessage(ChatColor.AQUA + "Set point to '" + x + ", " + y + ", " + z + "' for index " + (lastSelection+1));
-                         path.setSelection(-1);
-                     }
-                 }
-                 else {
-                     player.sendMessage(ChatColor.AQUA + "Selected point for index " + (i + 1));
-                     path.setSelection(i);
-                 }
-            }
-            else if(event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-                int i = path.getSelection();
-                if(i == -1) {
-                    i = path.getPointIndex(x, y, z);
-                    if(i != -1) {
-                        path.removePoint(i);
-                        player.sendMessage(ChatColor.AQUA + "Removed point at '" + x + ", " + y + ", " + z + "' for index " + (i+1));
+        final Player player = event.getPlayer();
+        if (player.isSneaking() && getSelection(player) instanceof PathMaker path) {
+            final Block block = event.getClickedBlock();
+            final int x = block.getX();
+            final int y = block.getY() + 1;
+            final int z = block.getZ();
+            if (event.getAction() == Action.LEFT_CLICK_BLOCK) {
+                final int i = path.getPointIndex(x, y, z);
+                if (i == -1) {
+                    final int lastSelection = path.getSelection();
+                    if (lastSelection == -1) {
+                        path.addPoint(x, y, z);
+                        player.sendMessage(ChatColor.AQUA + "Added point at '" + x + ", " + y + ", " + z + "' for index " + (path.size()));
+                        event.setCancelled(true);
+                    } else {
+                        path.setPoint(lastSelection, x, y, z);
+                        player.sendMessage(ChatColor.AQUA + "Set point to '" + x + ", " + y + ", " + z + "' for index " + (lastSelection + 1));
+                        path.setSelection(-1);
+                        event.setCancelled(true);
                     }
+                } else {
+                    player.sendMessage(ChatColor.AQUA + "Selected point for index " + (i + 1));
+                    path.setSelection(i);
+                    event.setCancelled(true);
                 }
-                else {
+            } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                int i = path.getSelection();
+                if (i == -1) {
+                    i = path.getPointIndex(x, y, z);
+                    if (i != -1) {
+                        path.removePoint(i);
+                        event.setCancelled(true);
+                        player.sendMessage(ChatColor.AQUA + "Removed point at '" + x + ", " + y + ", " + z + "' for index " + (i + 1));
+                    }
+                } else {
                     path.setSelection(-1);
-                    player.sendMessage(ChatColor.AQUA + "Cancelled selection for point at index " + (i+1));
+                    event.setCancelled(true);
+                    player.sendMessage(ChatColor.AQUA + "Cancelled selection for point at index " + (i + 1));
                 }
             }
         }
     }
 
     @EventHandler
-    public void onWorldChange(PlayerTeleportEvent event) {
-        if(isSelecting(event.getPlayer())) {
-            if(!event.getTo().getWorld().equals(event.getFrom().getWorld())) {
+    public void onWorldChange(final PlayerTeleportEvent event) {
+        if (isSelecting(event.getPlayer())) {
+            if (!event.getTo().getWorld().equals(event.getFrom().getWorld())) {
                 removeSelection(event.getPlayer(), false);
             }
         }

@@ -1,17 +1,17 @@
 package com.ravingarinc.actor.storage.sql;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.AsynchronousException;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.concurrent.AsynchronousException;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 
@@ -59,7 +59,7 @@ public class ActorDatabase extends Database {
                 while (result.next()) {
                     try {
                         loadActor(result);
-                    } catch(AsynchronousException e) {
+                    } catch (final AsynchronousException e) {
                         I.log(Level.SEVERE, "Encountered issue querying database!", e);
                     }
                 }
@@ -102,6 +102,16 @@ public class ActorDatabase extends Database {
                 addUnloadedActor(uuid, type, x, y, z, worldName, arguments);
             }
         }
+    }
+
+    public void deleteActor(final Actor<?> actor) {
+        queue(() -> prepareStatement(Actors.delete, (statement) -> {
+            try {
+                statement.setString(1, actor.getUUID().toString());
+            } catch (final SQLException e) {
+                I.log(Level.SEVERE, "Encountered issue preparing statement!", e);
+            }
+        }));
     }
 
     private void addUnloadedActor(final UUID uuid, final String type, final int x, final int y, final int z, final String worldName, final String arguments) {
@@ -149,7 +159,7 @@ public class ActorDatabase extends Database {
                 statement.setDouble(3, location.getX());
                 statement.setDouble(4, location.getY());
                 statement.setDouble(5, location.getZ());
-                statement.setString(6, location.getWorldName());
+                statement.setString(6, location.getWorld().getName());
                 final StringBuilder builder = new StringBuilder();
                 final Iterator<String> iterator = actor.getAppliedArguments().iterator();
                 while (iterator.hasNext()) {
@@ -173,7 +183,7 @@ public class ActorDatabase extends Database {
                 statement.setDouble(2, location.getX());
                 statement.setDouble(3, location.getY());
                 statement.setDouble(4, location.getZ());
-                statement.setString(5, location.getWorldName());
+                statement.setString(5, location.getWorld().getName());
                 final StringBuilder builder = new StringBuilder();
                 final Iterator<String> iterator = actor.getAppliedArguments().iterator();
                 while (iterator.hasNext()) {

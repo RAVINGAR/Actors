@@ -1,10 +1,10 @@
 package com.ravingarinc.actor.storage.sql;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.skin.ActorSkin;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.jetbrains.annotations.Async;
 
 import java.sql.ResultSet;

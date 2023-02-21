@@ -4,21 +4,22 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.BiMap;
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.BlockingRunner;
-import com.ravingarinc.actor.api.async.DelayedFutureTask;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
+import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
-import com.ravingarinc.actor.pathing.PathingManager;
+import com.ravingarinc.actor.npc.type.PlayerActor;
+import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.concurrent.BlockingRunner;
+import com.ravingarinc.api.concurrent.DelayedFutureTask;
+import com.ravingarinc.api.module.Module;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Async;
 
@@ -42,7 +43,7 @@ public class ActorManager extends Module {
 
     private final BiMap<Integer, UUID, Actor<?>> cachedActors;
     private BlockingRunner<FutureTask<Void>> runner;
-    private BlockingRunner<DelayedFutureTask> delayedRunner;
+    private BlockingRunner<DelayedFutureTask<Void>> delayedRunner;
     private SkinClient client;
     private ProtocolManager manager;
 
@@ -86,13 +87,8 @@ public class ActorManager extends Module {
 
     @Override
     public void cancel() {
-        DelayedFutureTask delayFuture = new DelayedFutureTask(delayedRunner.getCancelTask(), 0);
-        delayedRunner.queue(delayFuture);
-        AsyncHandler.waitForFuture(delayFuture);
-
-        FutureTask<Void> future = new FutureTask<>(runner.getCancelTask(), null);
-        runner.queue(future);
-        AsyncHandler.waitForFuture(future);
+        delayedRunner.blockUntilCancelled((runnable) -> new DelayedFutureTask<>(runnable, null, 0));
+        runner.blockUntilCancelled((runnable) -> new FutureTask<>(runnable, null));
 
         cachedActors.values().forEach(actor -> actor.getEntity().remove());
         cachedActors.clear();
@@ -112,6 +108,37 @@ public class ActorManager extends Module {
         });
     }
 
+    public void deleteActor(final int id) {
+        final Actor<?> actor = getActor(id);
+        if (actor == null) {
+            return;
+        }
+        deleteActor(actor);
+    }
+
+    public void deleteActor(final UUID uuid) {
+        final Actor<?> actor = getActor(uuid);
+        if (actor == null) {
+            return;
+        }
+        deleteActor(actor);
+    }
+
+    /**
+     * Deletes an actor
+     *
+     * @param actor The actor to delete
+     */
+    public void deleteActor(final Actor<?> actor) {
+        plugin.getModule(SelectorManager.class).removeActorSelection(actor);
+        plugin.getModule(PathingManager.class).removeAgent(actor);
+        if (actor instanceof PlayerActor playerActor) {
+            client.unlinkActorAll(playerActor);
+        }
+        database.deleteActor(actor);
+        cachedActors.removeBoth(actor.getId(), actor.getUUID());
+    }
+
     public Set<Actor<?>> filterActors(final Predicate<? super Actor<?>> filter) {
         return cachedActors.values().stream().filter(filter).collect(Collectors.toUnmodifiableSet());
     }
@@ -126,12 +153,12 @@ public class ActorManager extends Module {
 
     @SuppressWarnings("all")
     public Actor<?> getActor(int id) {
-        return cachedActors.get(id);
+        return cachedActors.getFirst(id);
     }
 
     @SuppressWarnings("all")
     public Actor<?> getActor(UUID uuid) {
-        return cachedActors.get(uuid);
+        return cachedActors.getSecond(uuid);
     }
 
     /**
@@ -224,7 +251,7 @@ public class ActorManager extends Module {
      */
     public FutureTask<Void> queueLater(final Runnable runnable, final long delay) {
         final FutureTask<Void> future = new FutureTask<>(runnable, null);
-        delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), delay * 1000 / 20));
+        delayedRunner.queue(new DelayedFutureTask<>(() -> this.runner.queue(future), null, delay * 1000 / 20));
         return future;
     }
 }

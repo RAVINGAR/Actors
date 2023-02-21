@@ -1,11 +1,10 @@
 package com.ravingarinc.actor.storage.sql;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.BlockingRunner;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.concurrent.BlockingRunner;
+import com.ravingarinc.api.module.Module;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,7 +60,7 @@ public abstract class Database extends Module {
 
     @Override
     public void cancel() {
-        AsyncHandler.waitForFuture(queue(databaseRunner.getCancelTask()));
+        databaseRunner.blockUntilCancelled(runnable -> new FutureTask<>(runnable, null));
     }
 
     public FutureTask<Void> queue(final Runnable runnable) {

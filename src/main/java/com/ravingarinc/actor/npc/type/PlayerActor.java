@@ -6,9 +6,9 @@ import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -30,17 +30,19 @@ public class PlayerActor extends LivingActor {
     @Override
     public void update(final ActorManager manager) {
         final Player[] viewers = getViewers().toArray(new Player[0]);
+        manager.queue(() -> manager.sendPacket(viewers, getRemovePacket(manager)));
         manager.queue(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager)));
-        manager.queueLater(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 5L);
+        manager.queue(() -> manager.sendPacket(viewers, getSpawnPacket(getLocation(), manager)));
+        manager.queueLater(() -> manager.sendPacket(viewers, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 10L);
     }
 
     @Override
-    public void spawn(final ActorManager manager, final Vector3 location, final Player viewer) {
+    public void spawn(final ActorManager manager, final Player viewer) {
         manager.queue(() -> {
             addViewer(viewer);
             manager.sendPackets(viewer,
                     getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER, manager),
-                    getSpawnPacket(location, manager));
+                    getSpawnPacket(getLocation(), manager));
         });
         manager.queueLater(() -> manager.sendPacket(viewer, getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER, manager)), 10L);
 
