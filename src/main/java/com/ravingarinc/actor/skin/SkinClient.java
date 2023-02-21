@@ -259,16 +259,14 @@ public class SkinClient extends Module {
     @Override
     public void cancel() {
         runner.cancel(true);
-        try {
-            final CompletableRunnable<Skin> runnable = new CompletableRunnable<>(
-                    CompletableFuture.completedFuture(null),
-                    (v) -> runner.getCancelTask().run());
-            runner.queue(runnable);
-            AsyncHandler.waitForFuture(runnable);
-        } catch (final AsynchronousException e) {
-            I.log(Level.SEVERE, "Could not shut down SkinClient module!", e);
-        }
-
+        runner.blockUntilCancelled((runnable) -> {
+            try {
+                return new CompletableRunnable<>(CompletableFuture.completedFuture(null), (v) -> runnable.run());
+            } catch (final AsynchronousException e) {
+                I.log(Level.SEVERE, "Could not shut down SkinClient module!", e);
+                return null;
+            }
+        });
         cachedSkins.clear();
     }
 }

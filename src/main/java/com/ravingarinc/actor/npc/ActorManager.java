@@ -4,7 +4,6 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.api.BiMap;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
@@ -44,7 +43,7 @@ public class ActorManager extends Module {
 
     private final BiMap<Integer, UUID, Actor<?>> cachedActors;
     private BlockingRunner<FutureTask<Void>> runner;
-    private BlockingRunner<DelayedFutureTask> delayedRunner;
+    private BlockingRunner<DelayedFutureTask<Void>> delayedRunner;
     private SkinClient client;
     private ProtocolManager manager;
 
@@ -88,13 +87,8 @@ public class ActorManager extends Module {
 
     @Override
     public void cancel() {
-        final DelayedFutureTask delayFuture = new DelayedFutureTask(delayedRunner.getCancelTask(), 0);
-        delayedRunner.queue(delayFuture);
-        AsyncHandler.waitForFuture(delayFuture);
-
-        final FutureTask<Void> future = new FutureTask<>(runner.getCancelTask(), null);
-        runner.queue(future);
-        AsyncHandler.waitForFuture(future);
+        delayedRunner.blockUntilCancelled((runnable) -> new DelayedFutureTask<>(runnable, null, 0));
+        runner.blockUntilCancelled((runnable) -> new FutureTask<>(runnable, null));
 
         cachedActors.values().forEach(actor -> actor.getEntity().remove());
         cachedActors.clear();
@@ -257,7 +251,7 @@ public class ActorManager extends Module {
      */
     public FutureTask<Void> queueLater(final Runnable runnable, final long delay) {
         final FutureTask<Void> future = new FutureTask<>(runnable, null);
-        delayedRunner.queue(new DelayedFutureTask(() -> this.runner.queue(future), delay * 1000 / 20));
+        delayedRunner.queue(new DelayedFutureTask<>(() -> this.runner.queue(future), null, delay * 1000 / 20));
         return future;
     }
 }

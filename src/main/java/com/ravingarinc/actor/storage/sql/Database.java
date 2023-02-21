@@ -1,6 +1,5 @@
 package com.ravingarinc.actor.storage.sql;
 
-import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.api.I;
 import com.ravingarinc.api.concurrent.BlockingRunner;
 import com.ravingarinc.api.module.Module;
@@ -61,7 +60,7 @@ public abstract class Database extends Module {
 
     @Override
     public void cancel() {
-        AsyncHandler.waitForFuture(queue(databaseRunner.getCancelTask()));
+        databaseRunner.blockUntilCancelled(runnable -> new FutureTask<>(runnable, null));
     }
 
     public FutureTask<Void> queue(final Runnable runnable) {
