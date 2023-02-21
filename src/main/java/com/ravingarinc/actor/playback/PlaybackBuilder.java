@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.playback;
 
-import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.npc.selector.Selectable;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
+import com.ravingarinc.api.Sync;
 import org.bukkit.entity.Player;
 
 public abstract class PlaybackBuilder implements Selectable {

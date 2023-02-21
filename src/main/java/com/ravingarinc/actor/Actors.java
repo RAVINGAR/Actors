@@ -9,6 +9,7 @@ import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.ConfigManager;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
 import com.ravingarinc.actor.storage.sql.SkinDatabase;
+import com.ravingarinc.api.module.RavinPlugin;
 
 public final class Actors extends RavinPlugin {
     @Override

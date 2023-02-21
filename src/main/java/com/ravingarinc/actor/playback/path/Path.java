@@ -2,15 +2,15 @@ package com.ravingarinc.actor.playback.path;
 
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.api.LivePlayback;
 import com.ravingarinc.actor.playback.api.Movement;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;

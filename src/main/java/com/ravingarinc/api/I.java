@@ -1,6 +1,6 @@
-package com.ravingarinc.actor.api.util;
+package com.ravingarinc.api;
 
-import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Supplier;

@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.playback.api;
 
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.playback.PathingManager;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.Player;
 
 public interface Playback {

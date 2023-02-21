@@ -1,6 +1,6 @@
 package com.ravingarinc.actor.api;
 
-import com.ravingarinc.actor.api.util.Pair;
+import com.ravingarinc.api.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

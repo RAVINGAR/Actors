@@ -1,15 +1,15 @@
 package com.ravingarinc.actor.npc;
 
 import com.ravingarinc.actor.api.AsyncFunction;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.AsynchronousException;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Pair;
-import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Pair;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.concurrent.AsynchronousException;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.EntityType;

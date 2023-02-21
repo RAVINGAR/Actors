@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.api.concurrent;
 
 import org.jetbrains.annotations.NotNull;
 

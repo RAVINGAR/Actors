@@ -1,6 +1,6 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.api.concurrent;
 
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
 
 import java.util.logging.Level;
 

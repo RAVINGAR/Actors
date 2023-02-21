@@ -4,16 +4,8 @@ import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.api.BiMap;
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.BlockingRunner;
-import com.ravingarinc.actor.api.async.DelayedFutureTask;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
@@ -21,6 +13,14 @@ import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.skin.SkinClient;
 import com.ravingarinc.actor.storage.sql.ActorDatabase;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.concurrent.BlockingRunner;
+import com.ravingarinc.api.concurrent.DelayedFutureTask;
+import com.ravingarinc.api.module.Module;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Async;
 
@@ -142,6 +142,7 @@ public class ActorManager extends Module {
             client.unlinkActorAll(playerActor);
         }
         database.deleteActor(actor);
+        cachedActors.removeBoth(actor.getId(), actor.getUUID());
     }
 
     public Set<Actor<?>> filterActors(final Predicate<? super Actor<?>> filter) {

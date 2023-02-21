@@ -1,6 +1,5 @@
-package com.ravingarinc.actor.api;
+package com.ravingarinc.api.module;
 
-import com.ravingarinc.actor.RavinPlugin;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 

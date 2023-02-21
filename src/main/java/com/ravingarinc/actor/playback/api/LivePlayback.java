@@ -1,9 +1,9 @@
 package com.ravingarinc.actor.playback.api;
 
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.Player;
 
 import javax.annotation.Nullable;

@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.command.subcommand;
 
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.command.CommandOption;
 import org.bukkit.ChatColor;
 
 import java.io.File;

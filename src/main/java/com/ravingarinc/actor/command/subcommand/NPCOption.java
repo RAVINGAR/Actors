@@ -1,11 +1,8 @@
 package com.ravingarinc.actor.command.subcommand;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.async.AsyncHandler;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.command.Argument;
-import com.ravingarinc.actor.command.CommandOption;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
@@ -15,6 +12,9 @@ import com.ravingarinc.actor.npc.type.LivingActor;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.skin.ActorSkin;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.command.CommandOption;
+import com.ravingarinc.api.module.RavinPlugin;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;

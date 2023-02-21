@@ -1,19 +1,19 @@
 package com.ravingarinc.actor.skin;
 
-import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.api.BiMap;
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.AsynchronousException;
-import com.ravingarinc.actor.api.async.BlockingRunner;
-import com.ravingarinc.actor.api.async.CompletableRunnable;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.PlayerActor;
 import com.ravingarinc.actor.storage.ConfigManager;
 import com.ravingarinc.actor.storage.sql.SkinDatabase;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.concurrent.AsynchronousException;
+import com.ravingarinc.api.concurrent.BlockingRunner;
+import com.ravingarinc.api.concurrent.CompletableRunnable;
+import com.ravingarinc.api.module.Module;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Async;
@@ -237,8 +237,7 @@ public class SkinClient extends Module {
                     }
                 }
             }, 15000L));
-        }
-        catch(AsynchronousException e) {
+        } catch (final AsynchronousException e) {
             I.log(Level.SEVERE, e.getMessage(), e);
         }
     }
@@ -261,13 +260,12 @@ public class SkinClient extends Module {
     public void cancel() {
         runner.cancel(true);
         try {
-            CompletableRunnable<Skin> runnable = new CompletableRunnable<>(
+            final CompletableRunnable<Skin> runnable = new CompletableRunnable<>(
                     CompletableFuture.completedFuture(null),
                     (v) -> runner.getCancelTask().run());
             runner.queue(runnable);
             AsyncHandler.waitForFuture(runnable);
-        }
-        catch(AsynchronousException e) {
+        } catch (final AsynchronousException e) {
             I.log(Level.SEVERE, "Could not shut down SkinClient module!", e);
         }
 

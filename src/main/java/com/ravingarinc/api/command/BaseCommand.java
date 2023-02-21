@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.command;
+package com.ravingarinc.api.command;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;

@@ -1,6 +1,6 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.api.concurrent;
 
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,8 +52,7 @@ public class CompletableRunnable<V> implements Runnable, Future<V> {
             I.log(Level.WARNING, "Encountered execution exception in CompletableRunnable!", e);
         } catch (final TimeoutException e) {
             I.log(Level.WARNING, "CompletableFuture timed out!");
-        }
-        finally {
+        } finally {
             consumer.accept(reference.getAcquire());
             semaphore.release();
         }
@@ -84,7 +83,7 @@ public class CompletableRunnable<V> implements Runnable, Future<V> {
     @Override
     @Blocking
     public V get(final long timeout, @NotNull final TimeUnit unit) {
-        if(isCancelled()) {
+        if (isCancelled()) {
             throw new CancellationException("CompletableRunnable was cancelled!");
         }
         try {

@@ -1,12 +1,13 @@
 package com.ravingarinc.actor.command;
 
-import com.ravingarinc.actor.RavinPlugin;
 import com.ravingarinc.actor.api.component.ChatUtil;
 import com.ravingarinc.actor.command.subcommand.NPCOption;
 import com.ravingarinc.actor.command.subcommand.PathOption;
 import com.ravingarinc.actor.command.subcommand.SkinOption;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.skin.SkinClient;
+import com.ravingarinc.api.command.BaseCommand;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 

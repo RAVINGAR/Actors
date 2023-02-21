@@ -1,6 +1,6 @@
 package com.ravingarinc.actor.api.component;
 
-import com.ravingarinc.actor.command.BaseCommand;
+import com.ravingarinc.api.command.BaseCommand;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ComponentBuilder;

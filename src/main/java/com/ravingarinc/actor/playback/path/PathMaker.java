@@ -1,13 +1,13 @@
 package com.ravingarinc.actor.playback.path;
 
-import com.ravingarinc.actor.api.async.Sync;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.selector.SelectionFailException;
 import com.ravingarinc.actor.playback.PathingAgent;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.api.Movement;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;

@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.api.util;
+package com.ravingarinc.api;
 
 public class Pair<L, R> {
 

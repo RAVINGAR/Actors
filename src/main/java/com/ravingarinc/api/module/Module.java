@@ -1,7 +1,6 @@
-package com.ravingarinc.actor.api;
+package com.ravingarinc.api.module;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
 import org.jetbrains.annotations.Async;
 import org.jetbrains.annotations.NotNull;
 

@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.api.concurrent.key;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
-public class ConcurrentKeyedQueue<T extends ConcurrentKeyedQueue.Keyed> implements Queue<T> {
-    private final ConcurrentHashMap<String, AtomicReference<T>> map;
+public class ConcurrentKeyedQueue<K, T extends Keyed<K>> implements Queue<T> {
+    private final ConcurrentHashMap<K, AtomicReference<T>> map;
     private final ConcurrentLinkedQueue<AtomicReference<T>> queue;
 
     private final Function<T, Boolean> offerFunction;
@@ -179,9 +179,5 @@ public class ConcurrentKeyedQueue<T extends ConcurrentKeyedQueue.Keyed> implemen
          * Ignore mode means that is a similarly named key value already exists, then do not update the value
          */
         IGNORE
-    }
-
-    public interface Keyed {
-        String getKey();
     }
 }

@@ -1,11 +1,11 @@
 package com.ravingarinc.actor.playback;
 
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.playback.api.LivePlayback;
 import com.ravingarinc.actor.playback.api.Playback;
 import com.ravingarinc.actor.playback.path.PathMaker;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

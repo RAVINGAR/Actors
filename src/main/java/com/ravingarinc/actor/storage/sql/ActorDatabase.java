@@ -1,17 +1,17 @@
 package com.ravingarinc.actor.storage.sql;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.async.AsynchronousException;
-import com.ravingarinc.actor.api.async.Sync;
-import com.ravingarinc.actor.api.util.I;
-import com.ravingarinc.actor.api.util.Vector3;
+import com.ravingarinc.actor.api.AsyncHandler;
 import com.ravingarinc.actor.command.Argument;
 import com.ravingarinc.actor.command.Registry;
 import com.ravingarinc.actor.npc.ActorFactory;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.Sync;
+import com.ravingarinc.api.Vector3;
+import com.ravingarinc.api.concurrent.AsynchronousException;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 

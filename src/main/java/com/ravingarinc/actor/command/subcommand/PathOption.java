@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.command.subcommand;
 
-import com.ravingarinc.actor.RavinPlugin;
+import com.ravingarinc.api.module.RavinPlugin;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.command.CommandOption;
+import com.ravingarinc.api.command.CommandOption;
 import com.ravingarinc.actor.npc.selector.SelectorManager;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.playback.PathFactory;

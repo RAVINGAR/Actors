@@ -1,9 +1,9 @@
 package com.ravingarinc.actor.playback.scene;
 
 import com.comphenix.protocol.events.PacketContainer;
-import com.ravingarinc.actor.api.util.Vector3;
 import com.ravingarinc.actor.playback.PathingManager;
 import com.ravingarinc.actor.playback.api.Movement;
+import com.ravingarinc.api.Vector3;
 import org.bukkit.entity.Player;
 
 /**

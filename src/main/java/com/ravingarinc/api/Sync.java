@@ -1,4 +1,4 @@
-package com.ravingarinc.actor.api.async;
+package com.ravingarinc.api;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

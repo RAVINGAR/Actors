@@ -1,9 +1,7 @@
-package com.ravingarinc.actor;
+package com.ravingarinc.api.module;
 
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.ModuleLoadException;
-import com.ravingarinc.actor.api.async.AsyncHandler;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.actor.api.AsyncHandler;
+import com.ravingarinc.api.I;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 

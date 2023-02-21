@@ -1,6 +1,5 @@
-package com.ravingarinc.actor.api.util;
+package com.ravingarinc.api;
 
-import com.ravingarinc.actor.api.async.Sync;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.util.Vector;

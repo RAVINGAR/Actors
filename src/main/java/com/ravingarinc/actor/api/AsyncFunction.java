@@ -1,6 +1,6 @@
 package com.ravingarinc.actor.api;
 
-import com.ravingarinc.actor.api.async.AsynchronousException;
+import com.ravingarinc.api.concurrent.AsynchronousException;
 import org.jetbrains.annotations.NotNull;
 
 @FunctionalInterface

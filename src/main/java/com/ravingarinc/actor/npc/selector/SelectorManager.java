@@ -1,14 +1,14 @@
 package com.ravingarinc.actor.npc.selector;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.ModuleListener;
-import com.ravingarinc.actor.api.ModuleLoadException;
 import com.ravingarinc.actor.api.component.ChatUtil;
-import com.ravingarinc.actor.api.util.I;
 import com.ravingarinc.actor.npc.ActorManager;
 import com.ravingarinc.actor.npc.type.Actor;
 import com.ravingarinc.actor.playback.PlaybackBuilder;
 import com.ravingarinc.actor.playback.path.PathMaker;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.module.ModuleListener;
+import com.ravingarinc.api.module.ModuleLoadException;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.ChatColor;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;

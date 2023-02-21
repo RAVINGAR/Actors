@@ -1,8 +1,8 @@
 package com.ravingarinc.actor.storage;
 
-import com.ravingarinc.actor.RavinPlugin;
-import com.ravingarinc.actor.api.Module;
-import com.ravingarinc.actor.api.util.I;
+import com.ravingarinc.api.I;
+import com.ravingarinc.api.module.Module;
+import com.ravingarinc.api.module.RavinPlugin;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.Optional;
