@@ -45,6 +45,11 @@ repositories {
             includeGroup 'org.mineskin'
         }
     }
+
+    maven {
+        name 'jitpack'
+        url "https://jitpack.io"
+    }
 }
 
 dependencies {
